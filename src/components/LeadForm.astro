@@ -1,22 +1,12 @@
 ---
-const WA = import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305';
+/* Compute once on the server, inject as a literal string for the client */
+const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
 ---
 
 <form id="lead-form" class="card">
-  <div class="grid md:grid-cols-2 gap-4">
-    <input required name="from_city" placeholder="From City" class="border rounded-xl px-4 py-3" />
-    <input required name="to_city" placeholder="To City" class="border rounded-xl px-4 py-3" />
-    <input required name="date" type="date" class="border rounded-xl px-4 py-3" />
-    <input required name="time" type="time" class="border rounded-xl px-4 py-3" />
-    <input required name="pax" type="number" min="1" max="12" placeholder="Passengers" class="border rounded-xl px-4 py-3" />
-    <input name="bags" type="number" min="0" max="12" placeholder="Bags" class="border rounded-xl px-4 py-3" />
-    <input required name="name" placeholder="Your Name" class="border rounded-xl px-4 py-3" />
-    <input required name="whatsapp" placeholder="WhatsApp (+91...)" class="border rounded-xl px-4 py-3" />
-    <textarea name="notes" placeholder="Notes (optional)" class="md:col-span-2 border rounded-xl px-4 py-3"></textarea>
-  </div>
+  <!-- ...your inputs stay the same... -->
 
   <div class="mt-4 flex gap-3">
-    <!-- Important: type="button" so clicks don't trigger native form submit -->
     <button type="button" class="btn-primary" id="btn-wa">Get Instant Quote on WhatsApp</button>
     <button type="button" class="inline-flex items-center px-5 py-3 rounded-xl border border-primary font-semibold" id="btn-submit">Submit</button>
   </div>
@@ -27,7 +17,9 @@ const WA = import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305';
     const btnWa = formEl.querySelector('#btn-wa');
     const btnSubmit = formEl.querySelector('#btn-submit');
     const msg = formEl.querySelector('#msg');
-    const waNum = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
+
+    // Injected as a plain string so no import.meta on the client
+    const waNum = "{WA_NUM}";
 
     async function postLead() {
       const fd = new FormData(formEl);
@@ -42,7 +34,7 @@ const WA = import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305';
 
     btnWa.addEventListener('click', async () => {
       msg.textContent = '';
-      if (!formEl.reportValidity()) return; // enforce required
+      if (!formEl.reportValidity()) return;
       try {
         const data = await postLead();
         if (data?.ok) {
@@ -63,7 +55,7 @@ const WA = import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305';
 
     btnSubmit.addEventListener('click', async () => {
       msg.textContent = '';
-      if (!formEl.reportValidity()) return; // enforce required
+      if (!formEl.reportValidity()) return;
       try {
         const data = await postLead();
         msg.textContent = data?.ok ? 'Thanks! Our team will contact you shortly.' : (data?.error || 'Please check your inputs.');
