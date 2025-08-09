@@ -1,7 +1,8 @@
 ---
-/* Compute once on the server, inject as a literal string for the client */
 const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
+import { supabase } from '@/lib/supabaseClient';
 ---
+
 
 <form id="lead-form" class="card">
   <!-- ...your inputs stay the same... -->
@@ -12,44 +13,57 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
   </div>
   <p id="msg" class="mt-3 text-sm"></p>
 
-  <script is:inline>
+  <script type="module">
+    import { supabase } from '/src/lib/supabaseClient.ts';
+
     const formEl = document.getElementById('lead-form');
     const btnWa = formEl.querySelector('#btn-wa');
     const btnSubmit = formEl.querySelector('#btn-submit');
     const msg = formEl.querySelector('#msg');
+    const waNum = "{{WA_NUM}}";
 
-    // Injected as a plain string so no import.meta on the client
-    const waNum = "{WA_NUM}";
-
-    async function postLead() {
+    async function insertLead() {
       const fd = new FormData(formEl);
       const payload = Object.fromEntries(fd.entries());
-      const res = await fetch('/api/lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+
+      // Minimal client validation
+      const req = ['from_city','to_city','date','time','pax','name','whatsapp'];
+      for (const k of req) if (!payload[k]) throw new Error(`Missing ${k}`);
+
+      const { error } = await supabase.from('leads').insert({
+        source: 'web',
+        from_city: payload.from_city,
+        to_city: payload.to_city,
+        date: payload.date,
+        time: payload.time,
+        pax: String(payload.pax),
+        bags: String(payload.bags || '0'),
+        name: payload.name,
+        whatsapp: payload.whatsapp,
+        notes: payload.notes || '',
+        utm_source: payload.utm_source || '',
+        utm_campaign: payload.utm_campaign || ''
       });
-      return res.json();
+
+      if (error) throw error;
+      return payload;
     }
 
     btnWa.addEventListener('click', async () => {
       msg.textContent = '';
       if (!formEl.reportValidity()) return;
       try {
-        const data = await postLead();
-        if (data?.ok) {
-          const t =
-            `Ride request:%0AFrom: ${encodeURIComponent(data.lead.from_city)}` +
-            `%0ATo: ${encodeURIComponent(data.lead.to_city)}` +
-            `%0ADate/Time: ${encodeURIComponent(data.lead.date)} ${encodeURIComponent(data.lead.time)}` +
-            `%0APax/Bags: ${encodeURIComponent(data.lead.pax)}/${encodeURIComponent(data.lead.bags ?? '0')}` +
-            `%0ANotes: ${encodeURIComponent(data.lead.notes ?? '')}`;
-          window.location.href = `https://wa.me/${waNum}?text=${t}`;
-        } else {
-          msg.textContent = data?.error || 'Please check your inputs.';
-        }
-      } catch {
+        const lead = await insertLead();
+        const t =
+          `Ride request:%0AFrom: ${encodeURIComponent(lead.from_city)}` +
+          `%0ATo: ${encodeURIComponent(lead.to_city)}` +
+          `%0ADate/Time: ${encodeURIComponent(lead.date)} ${encodeURIComponent(lead.time)}` +
+          `%0APax/Bags: ${encodeURIComponent(lead.pax)}/${encodeURIComponent(lead.bags || '0')}` +
+          `%0ANotes: ${encodeURIComponent(lead.notes || '')}`;
+        window.location.href = `https://wa.me/${waNum}?text=${t}`;
+      } catch (e) {
         msg.textContent = 'Network error. Try again.';
+        console.error(e);
       }
     });
 
@@ -57,10 +71,11 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
       msg.textContent = '';
       if (!formEl.reportValidity()) return;
       try {
-        const data = await postLead();
-        msg.textContent = data?.ok ? 'Thanks! Our team will contact you shortly.' : (data?.error || 'Please check your inputs.');
-      } catch {
+        await insertLead();
+        msg.textContent = 'Thanks! Our team will contact you shortly.';
+      } catch (e) {
         msg.textContent = 'Network error. Try again.';
+        console.error(e);
       }
     });
   </script>
