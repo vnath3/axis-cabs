@@ -8,6 +8,10 @@ import FAQ from '@/components/FAQ.astro';
 import { routes } from '@/data/routes';
 import pricing from '@/data/pricing.json';
 
+export async function getStaticPaths() {
+  return routes.map((r) => ({ params: { slug: r.slug } }));
+}
+
 const { slug } = Astro.params;
 const entry = routes.find(r => r.slug === slug);
 if (!entry) return Astro.redirect('/');

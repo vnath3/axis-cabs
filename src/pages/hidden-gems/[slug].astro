@@ -6,6 +6,10 @@ import Hero from '@/components/Hero.astro';
 import { gems } from '@/data/gems';
 import LeadForm from '@/components/LeadForm.astro';
 
+export async function getStaticPaths() {
+  return gems.map((g) => ({ params: { slug: g.slug } }));
+}
+
 const { slug } = Astro.params;
 const entry = gems.find(g => g.slug === slug);
 if (!entry) return Astro.redirect('/');
