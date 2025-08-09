@@ -27,6 +27,7 @@ const WA = import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305';
     const btnWa = formEl.querySelector('#btn-wa');
     const btnSubmit = formEl.querySelector('#btn-submit');
     const msg = formEl.querySelector('#msg');
+    const waNum = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
 
     async function postLead() {
       const fd = new FormData(formEl);
@@ -41,26 +42,28 @@ const WA = import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305';
 
     btnWa.addEventListener('click', async () => {
       msg.textContent = '';
+      if (!formEl.reportValidity()) return; // enforce required
       try {
         const data = await postLead();
         if (data?.ok) {
-          const text =
+          const t =
             `Ride request:%0AFrom: ${encodeURIComponent(data.lead.from_city)}` +
             `%0ATo: ${encodeURIComponent(data.lead.to_city)}` +
             `%0ADate/Time: ${encodeURIComponent(data.lead.date)} ${encodeURIComponent(data.lead.time)}` +
             `%0APax/Bags: ${encodeURIComponent(data.lead.pax)}/${encodeURIComponent(data.lead.bags ?? '0')}` +
             `%0ANotes: ${encodeURIComponent(data.lead.notes ?? '')}`;
-          window.location.href = `https://wa.me/${encodeURIComponent('${WA}'.replace('+',''))}?text=${text}`;
+          window.location.href = `https://wa.me/${waNum}?text=${t}`;
         } else {
           msg.textContent = data?.error || 'Please check your inputs.';
         }
-      } catch (e) {
+      } catch {
         msg.textContent = 'Network error. Try again.';
       }
     });
 
     btnSubmit.addEventListener('click', async () => {
       msg.textContent = '';
+      if (!formEl.reportValidity()) return; // enforce required
       try {
         const data = await postLead();
         msg.textContent = data?.ok ? 'Thanks! Our team will contact you shortly.' : (data?.error || 'Please check your inputs.');

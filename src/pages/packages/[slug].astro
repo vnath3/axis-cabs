@@ -6,6 +6,7 @@ import Hero from '@/components/Hero.astro';
 import LeadForm from '@/components/LeadForm.astro';
 import { packages } from '@/data/packages';
 import pricing from '@/data/pricing.json';
+import Analytics from '@/components/Analytics.astro';
 
 // REQUIRED for dynamic static pages:
 export async function getStaticPaths() {
@@ -18,7 +19,11 @@ if (!entry) return Astro.redirect('/');
 const band = pricing.packages?.[slug!];
 ---
 <html lang="en">
-  <head>…</head>
+   <head>
+     <meta charset="utf-8" />
+     ...
+     <Analytics />
+   </head>
   <body>
     <Header />
     <Hero title={entry.title} sub={entry.summary} />

@@ -5,6 +5,7 @@ import Footer from '@/components/Footer.astro';
 import Hero from '@/components/Hero.astro';
 import { gems } from '@/data/gems';
 import LeadForm from '@/components/LeadForm.astro';
+import Analytics from '@/components/Analytics.astro';
 
 export async function getStaticPaths() {
   return gems.map((g) => ({ params: { slug: g.slug } }));
@@ -21,6 +22,7 @@ if (!entry) return Astro.redirect('/');
     <title>{entry.title}</title>
     <meta name="description" content={entry.summary} />
     <link rel="icon" href="/favicon.svg" />
+    <Analytics />
   </head>
   <body>
     <Header />

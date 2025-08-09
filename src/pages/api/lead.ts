@@ -1,41 +1,45 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
-import { LeadSchema } from '@/lib/validators';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!);
 
-export const post: APIRoute = async ({ request }) => {
+// UPPERCASE in Astro v5:
+export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const parsed = LeadSchema.safeParse(body);
-    if (!parsed.success) {
-      return new Response(JSON.stringify({ ok: false, error: 'Invalid input' }), { status: 400 });
+
+    // Basic sanity (avoid empty spam)
+    const required = ['from_city','to_city','date','time','pax','name','whatsapp'];
+    for (const k of required) {
+      if (!body?.[k]) {
+        return new Response(JSON.stringify({ ok:false, error:`Missing ${k}` }), { status: 400 });
+      }
     }
-    const lead = parsed.data;
-    // Honeypot example: if notes contains suspicious URL spam
-    if (/https?:\/\//i.test(lead.notes || '')) {
-      return new Response(JSON.stringify({ ok: true, lead }), { status: 200 });
+
+    // Simple spam guard
+    if (typeof body.notes === 'string' && /https?:\/\//i.test(body.notes)) {
+      return new Response(JSON.stringify({ ok: true, lead: body }), { status: 200 });
     }
 
     const { error } = await supabase.from('leads').insert({
       source: 'web',
-      from_city: lead.from_city,
-      to_city: lead.to_city,
-      date: lead.date,
-      time: lead.time,
-      pax: lead.pax,
-      bags: lead.bags,
-      name: lead.name,
-      whatsapp: lead.whatsapp,
-      notes: lead.notes,
-      utm_source: lead.utm_source,
-      utm_campaign: lead.utm_campaign
+      from_city: body.from_city,
+      to_city: body.to_city,
+      date: body.date,
+      time: body.time,
+      pax: String(body.pax),
+      bags: String(body.bags ?? '0'),
+      name: body.name,
+      whatsapp: body.whatsapp,
+      notes: body.notes ?? '',
+      utm_source: body.utm_source ?? '',
+      utm_campaign: body.utm_campaign ?? ''
     });
 
     if (error) throw error;
 
-    return new Response(JSON.stringify({ ok: true, lead }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, lead: body }), { status: 200 });
   } catch (e: any) {
-    return new Response(JSON.stringify({ ok: false, error: e.message || 'Server error' }), { status: 500 });
+    return new Response(JSON.stringify({ ok:false, error: e?.message || 'Server error' }), { status: 500 });
   }
 };
