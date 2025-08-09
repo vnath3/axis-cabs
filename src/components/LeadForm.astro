@@ -26,13 +26,10 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
     {!ENV_OK && '⚠️ Missing Supabase env vars. Add PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY on Netlify, then redeploy.'}
   </p>
 
- <script type="module" is:inline>
+ <script type="module">
    import { getSupabaseClient } from '@/lib/SupabaseClient';
-
-   // Wrap to avoid leaking identifiers into the page/global scope
    (function initAxisLeadForm() {
-     const db = getSupabaseClient(); // <-- renamed; no 'supabase' now
-
+     const db = getSupabaseClient();
      const formEl = document.getElementById('lead-form');
      if (!formEl) return;
 
@@ -43,7 +40,6 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
      async function insertLead() {
        const fd = new FormData(formEl);
        const payload = Object.fromEntries(fd.entries());
-
        const req = ['from_city','to_city','date','time','pax','name','whatsapp'];
        for (const k of req) if (!payload[k]) throw new Error(`Missing ${k}`);
 
