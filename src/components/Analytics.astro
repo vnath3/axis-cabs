@@ -1,0 +1,15 @@
+---
+const GA4 = import.meta.env.PUBLIC_GA4_ID;
+if (!GA4) console.warn('GA4 ID missing: set PUBLIC_GA4_ID in Netlify env vars');
+---
+{GA4 && (
+  <>
+    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4}`}></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '{GA4}');
+    </script>
+  </>
+)}
