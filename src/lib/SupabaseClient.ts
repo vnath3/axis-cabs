@@ -1,24 +1,30 @@
 // src/lib/SupabaseClient.ts
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-// MUST be PUBLIC_* so they are available in the browser in Astro
-const URL = import.meta.env.PUBLIC_SUPABASE_URL;
-const KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const RAW_URL = (import.meta.env.PUBLIC_SUPABASE_URL || '').trim();
+const RAW_KEY = (import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '').trim();
 
 let client: SupabaseClient | null = null;
 
-/**
-* Safe singleton accessor. Throws a clear error if env vars are missing.
-* Works in both browser and server contexts in Astro v5.
-*/
 export function getSupabaseClient(): SupabaseClient {
 if (client) return client;
-if (!URL || !KEY) {
-// Make the error obvious in the console without crashing the whole app early
-    throw new Error(
-'Supabase env vars missing. Set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY in Netlify and redeploy.'
+
+// Log once (masked) so we can see what reached the bundle at runtime
+  if (typeof window !== 'undefined') {
+// runs in browser too
+    console.log(
+'[Supa env]',
+'URL:', RAW_URL ? RAW_URL.replace(/^https?:\/\//,'').split('.')[0] : '(missing)',
+      'KEY:', RAW_KEY ? 'present' : '(missing)'
 );
 }
-client = createClient(URL, KEY, { auth: { persistSession: false } });
+
+// Basic validation to prevent "Invalid URL"
+  const validUrl = /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(RAW_URL);
+if (!validUrl || !RAW_KEY) {
+throw new Error('Supabase env missing/invalid. Check PUBLIC_SUPABASE_URL & PUBLIC_SUPABASE_ANON_KEY on Netlify.');
+}
+
+client = createClient(RAW_URL, RAW_KEY, { auth: { persistSession: false } });
 return client;
 }

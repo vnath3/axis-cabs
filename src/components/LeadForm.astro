@@ -1,11 +1,11 @@
 ---
-/** Server-side only: read env and inject as plain strings for the client */
 const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
 const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
 ---
 
-<form id="lead-form" class="card">
+<form id="lead-form" class="card" data-supa-url={SUPA_URL} data-supa-key={SUPA_KEY} data-wa={WA_NUM}>
   <div class="grid md:grid-cols-2 gap-4">
     <input required name="from_city" placeholder="From City" class="border rounded-xl px-4 py-3" />
     <input required name="to_city" placeholder="To City" class="border rounded-xl px-4 py-3" />
@@ -22,33 +22,40 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
     <button type="button" class="btn-primary" id="btn-wa">Get Instant Quote on WhatsApp</button>
     <button type="button" class="inline-flex items-center px-5 py-3 rounded-xl border border-primary font-semibold" id="btn-submit">Submit</button>
   </div>
-  <p id="msg" class="mt-3 text-sm"></p>
+  <p id="msg" class="mt-3 text-sm">
+    {!ENV_OK && '⚠️ Missing Supabase env vars. Add PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY on Netlify, then redeploy.'}
+  </p>
 
-  <!-- Module + inline so Astro can inject the strings above -->
   <script type="module" is:inline>
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { getSupabaseClient } from '@/lib/SupabaseClient';
+    const supabase = getSupabaseClient();
 
     const formEl = document.getElementById('lead-form');
     const btnWa = formEl.querySelector('#btn-wa');
     const btnSubmit = formEl.querySelector('#btn-submit');
     const msg = formEl.querySelector('#msg');
 
-    // Injected strings from server-side frontmatter
-    const WA_NUM = '${WA_NUM}';
-    const SUPA_URL = '${SUPA_URL}';
-    const SUPA_KEY = '${SUPA_KEY}';
+    const SUPA_URL = formEl.dataset.supaUrl || '';
+    const SUPA_KEY = formEl.dataset.supaKey || '';
+    const WA_NUM   = formEl.dataset.wa || '';
 
-    const supabase = createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } });
+    // If envs missing, disable buttons with a clear console message
+    if (!SUPA_URL || !SUPA_KEY) {
+      btnWa.disabled = true;
+      btnSubmit.disabled = true;
+      console.error('Missing PUBLIC_SUPABASE_URL or PUBLIC_SUPABASE_ANON_KEY.');
+    }
+
+    const supabase = (SUPA_URL && SUPA_KEY)
+      ? createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } })
+      : null;
 
     async function insertLead() {
       const fd = new FormData(formEl);
       const payload = Object.fromEntries(fd.entries());
 
-      // enforce required in JS as well
       const req = ['from_city','to_city','date','time','pax','name','whatsapp'];
-      for (const k of req) {
-        if (!payload[k]) throw new Error(`Missing ${k}`);
-      }
+      for (const k of req) if (!payload[k]) throw new Error(`Missing ${k}`);
 
       const { error } = await supabase.from('leads').insert({
         source: 'web',
@@ -64,14 +71,13 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
         utm_source: payload.utm_source || '',
         utm_campaign: payload.utm_campaign || ''
       });
-
       if (error) throw error;
       return payload;
     }
 
     btnWa.addEventListener('click', async () => {
       msg.textContent = '';
-      if (!formEl.reportValidity()) return;
+      if (!supabase || !formEl.reportValidity()) return;
       try {
         const lead = await insertLead();
         const t =
@@ -89,7 +95,7 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
     btnSubmit.addEventListener('click', async () => {
       msg.textContent = '';
-      if (!formEl.reportValidity()) return;
+      if (!supabase || !formEl.reportValidity()) return;
       try {
         await insertLead();
         msg.textContent = 'Thanks! Our team will contact you shortly.';
