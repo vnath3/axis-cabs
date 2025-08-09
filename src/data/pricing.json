@@ -1,0 +1,14 @@
+{
+  "routes": {
+    "pune-to-mumbai-cab": {"sedan_from": 2999, "suv_from": 3499},
+    "mumbai-to-goa-cab": {"sedan_from": 8999, "suv_from": 10999},
+    "aurangabad-to-ellora-ajanta-cab": {"sedan_from": 2499, "suv_from": 3499},
+    "delhi-to-agra-cab": {"sedan_from": 4499, "suv_from": 5499},
+    "jaipur-to-udaipur-cab": {"sedan_from": 6999, "suv_from": 8499}
+  },
+  "packages": {
+    "ajanta-ellora-2-day-itinerary": {"sedan_band": [4500, 5000], "suv_band": [5500, 6500]},
+    "goa-3-day-relax-itinerary": {"sedan_band": [6999, 8999], "suv_band": [8999, 11999]},
+    "varanasi-2-day-rituals-heritage": {"sedan_band": [4999, 6999], "suv_band": [6999, 9999]}
+  }
+}

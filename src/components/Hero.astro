@@ -1,0 +1,21 @@
+---
+interface Props { title: string; sub?: string; image?: string }
+const { title, sub } = Astro.props;
+---
+<section class="relative">
+  <div class="mx-auto max-w-6xl px-4 py-10 grid md:grid-cols-2 gap-8 items-center">
+    <div>
+      <h1 class="text-3xl md:text-5xl font-extrabold leading-tight">{title}</h1>
+      {sub && <p class="mt-4 text-lg opacity-80">{sub}</p>}
+      <div class="mt-6 flex gap-3">
+        <a href="#lead" class="btn-primary">Get My Quote</a>
+        <a href="https://wa.me/919922333305" class="inline-flex items-center px-5 py-3 rounded-xl border border-primary font-semibold">Chat on WhatsApp</a>
+      </div>
+    </div>
+    <div class="hidden md:block">
+      <div class="card">
+        <p class="text-sm">Trusted by 5,000+ travellers • 24×7 support • GPS‑tracked</p>
+      </div>
+    </div>
+  </div>
+</section>

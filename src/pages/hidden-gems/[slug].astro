@@ -1,0 +1,37 @@
+---
+import '../../styles/globals.css';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+import Hero from '@/components/Hero.astro';
+import { gems } from '@/data/gems';
+import LeadForm from '@/components/LeadForm.astro';
+
+const { slug } = Astro.params;
+const entry = gems.find(g => g.slug === slug);
+if (!entry) return Astro.redirect('/');
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{entry.title}</title>
+    <meta name="description" content={entry.summary} />
+    <link rel="icon" href="/favicon.svg" />
+  </head>
+  <body>
+    <Header />
+    <Hero title={entry.title} sub={entry.summary} />
+    <main class="mx-auto max-w-6xl px-4 grid md:grid-cols-3 gap-8">
+      <div class="md:col-span-2 space-y-4">
+        {entry.bestTime && <div class="card"><strong>Best Time</strong><p class="text-sm mt-2">{entry.bestTime}</p></div>}
+        {entry.howToReach && <div class="card"><strong>How to Reach</strong><p class="text-sm mt-2">{entry.howToReach}</p></div>}
+        {entry.content.map((p) => <div class="card text-sm opacity-90">{p}</div>)}
+        <div class="card"><strong>Plan with Axis</strong><p class="text-sm mt-2">Bundle this with nearby routes for better pricing.</p></div>
+      </div>
+      <aside>
+        <div class="card"><h3 class="font-semibold mb-2">Get a Cab</h3><LeadForm /></div>
+      </aside>
+    </main>
+    <Footer />
+  </body>
+</html>

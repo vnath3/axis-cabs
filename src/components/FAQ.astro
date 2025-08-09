@@ -1,0 +1,12 @@
+---
+interface FAQ { q: string; a: string }
+const { items = [] } = Astro.props as { items: FAQ[] };
+---
+<div class="mt-10 space-y-3">
+  {items.map((f, i) => (
+    <details class="card" data-faq-id={i}>
+      <summary class="cursor-pointer font-semibold">{f.q}</summary>
+      <p class="mt-2 text-sm opacity-80">{f.a}</p>
+    </details>
+  ))}
+</div>

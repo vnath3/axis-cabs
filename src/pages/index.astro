@@ -1,0 +1,44 @@
+---
+import '../styles/globals.css';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+import Hero from '@/components/Hero.astro';
+import LeadForm from '@/components/LeadForm.astro';
+import StickyCTAs from '@/components/StickyCTAs.astro';
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Axis Cabs — Ground Travel & Itineraries, Sorted.</title>
+    <meta name="description" content="Book intercity cabs, itineraries, and hidden gems across India. Transparent fares, professional drivers, 24×7 support." />
+    <link rel="icon" href="/favicon.svg" />
+    <meta property="og:title" content="Axis Cabs" />
+    <meta property="og:description" content="Cabs & itineraries across India. Get instant WhatsApp quote." />
+    <meta property="og:image" content="/og-default.jpg" />
+  </head>
+  <body>
+    <Header />
+    <Hero title="Cabs & Itineraries Across India" sub="Instant WhatsApp quotes • Transparent fares • 24×7 support" />
+    <main class="mx-auto max-w-6xl px-4 grid md:grid-cols-3 gap-8">
+      <div class="md:col-span-2">
+        <section>
+          <h2 class="text-xl font-bold mb-3">Plan Your Trip</h2>
+          <LeadForm />
+        </section>
+      </div>
+      <aside class="space-y-4">
+        <div class="card">
+          <h3 class="font-semibold mb-2">Popular Routes</h3>
+          <ul class="list-disc list-inside text-sm space-y-1">
+            <li><a class="underline" href="/city-to-city/pune-to-mumbai-cab">Pune → Mumbai</a></li>
+            <li><a class="underline" href="/city-to-city/delhi-to-agra-cab">Delhi → Agra</a></li>
+            <li><a class="underline" href="/city-to-city/jaipur-to-udaipur-cab">Jaipur → Udaipur</a></li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+    <StickyCTAs />
+    <Footer />
+  </body>
+</html>

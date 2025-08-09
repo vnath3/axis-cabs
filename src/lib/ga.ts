@@ -1,0 +1,1 @@
+export const GA4_ID = import.meta.env.PUBLIC_GA4_ID || '';
