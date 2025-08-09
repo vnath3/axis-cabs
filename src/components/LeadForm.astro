@@ -26,8 +26,9 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
     {!ENV_OK && '⚠️ Missing Supabase env vars. Add PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY on Netlify, then redeploy.'}
   </p>
 
- <script type="module">
+ <script hoist>
    import { getSupabaseClient } from '@/lib/SupabaseClient';
+
    (function initAxisLeadForm() {
      const db = getSupabaseClient();
      const formEl = document.getElementById('lead-form');
@@ -93,4 +94,5 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
      });
    })();
  </script>
+
 </form>
