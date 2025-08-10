@@ -4,18 +4,10 @@ import Header from '@/components/Header.astro';
 import Footer from '@/components/Footer.astro';
 import Hero from '@/components/Hero.astro';
 import LeadForm from '@/components/LeadForm.astro';
+import FAQ from '@/components/FAQ.astro';
 import { packages } from '@/data/packages';
 import pricing from '@/data/pricing.json';
-import Analytics from '@/components/Analytics.astro';
-import JsonLd from '@/components/JsonLd.astro';
-const url = `https://axis-cabs.netlify.app/packages/${slug}`;
-const crumbs = [
-  { name: "Home", url: "https://axis-cabs.netlify.app/" },
-  { name: "Packages", url: "https://axis-cabs.netlify.app/" },
-  { name: entry.title, url }
-];
 
-// REQUIRED for dynamic static pages:
 export async function getStaticPaths() {
   return packages.map((p) => ({ params: { slug: p.slug } }));
 }
@@ -23,20 +15,17 @@ export async function getStaticPaths() {
 const { slug } = Astro.params;
 const entry = packages.find((p) => p.slug === slug);
 if (!entry) return Astro.redirect('/');
+
 const band = pricing.packages?.[slug!];
 ---
 <html lang="en">
-   <head>
-     <meta charset="utf-8" />
-        <JsonLd data={{
-           "@context":"https://schema.org",
-           "@type":"BreadcrumbList",
-           "itemListElement": crumbs.map((c, i) => ({
-             "@type":"ListItem", "position": i+1, "name": c.name, "item": c.url
-           }))
-         }} />
-     <Analytics />
-   </head>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{entry.title}</title>
+    <meta name="description" content={entry.summary} />
+    <link rel="icon" href="/favicon.svg" />
+  </head>
   <body>
     <Header />
     <Hero title={entry.title} sub={entry.summary} />
@@ -50,7 +39,23 @@ const band = pricing.packages?.[slug!];
           </p>
           <p class="text-sm mt-1 opacity-70">Inclusions: AC cab, fuel, driver allowance. Exclusions: entry tickets, meals, hotel.</p>
         </section>
-        <section class="mt-6"><h3 class="text-lg font-bold mb-3">Get Your Quote</h3><LeadForm /></section>
+        <section class="mt-6">
+          <h3 class="text-lg font-bold mb-3">Outline</h3>
+          <div class="space-y-3">
+            {entry.days.map((d) => (
+              <div class="card">
+                <strong>{d.day}</strong>
+                <ul class="list-disc list-inside text-sm mt-2">
+                  {d.items.map(i => <li>{i}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section class="mt-6">
+          <h3 class="text-lg font-bold mb-3">Get Your Quote</h3>
+          <LeadForm />
+        </section>
       </div>
       <aside class="space-y-4">
         <div class="card"><strong>Why Axis Cabs?</strong><p class="text-sm mt-2 opacity-80">Local expertise • Flexible timing • Premium support</p></div>

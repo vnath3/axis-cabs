@@ -7,22 +7,7 @@ import LeadForm from '@/components/LeadForm.astro';
 import FAQ from '@/components/FAQ.astro';
 import { routes } from '@/data/routes';
 import pricing from '@/data/pricing.json';
-import Analytics from '@/components/Analytics.astro';
-import JsonLd from '@/components/JsonLd.astro';
-import { routes } from '@/data/routes';
-const url = `https://axis-cabs.netlify.app/city-to-city/${slug}`;
-const crumbs = [
-  { name: "Home", url: "https://axis-cabs.netlify.app/" },
-  { name: "Routes", url: "https://axis-cabs.netlify.app/" },
-  { name: entry.title, url }
-];
-const faqItems = (entry.faqs || []).map((f) => ({
-  "@type": "Question",
-  "name": f.q,
-  "acceptedAnswer": { "@type": "Answer", "text": f.a }
-}));
 
-// REQUIRED for dynamic static pages:
 export async function getStaticPaths() {
   return routes.map((r) => ({ params: { slug: r.slug } }));
 }
@@ -30,28 +15,17 @@ export async function getStaticPaths() {
 const { slug } = Astro.params;
 const entry = routes.find((r) => r.slug === slug);
 if (!entry) return Astro.redirect('/');
+
 const price = pricing.routes?.[slug!];
 ---
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <JsonLd data={{
-          "@context":"https://schema.org",
-          "@type":"BreadcrumbList",
-          "itemListElement": crumbs.map((c, i) => ({
-            "@type":"ListItem", "position": i+1, "name": c.name, "item": c.url
-          }))
-        }} />
-        {faqItems.length > 0 && (
-          <JsonLd data={{
-            "@context":"https://schema.org",
-            "@type":"FAQPage",
-            "mainEntity": faqItems
-          }} />
-        )}
-    <Analytics />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{entry.title}</title>
+    <meta name="description" content={entry.summary} />
+    <link rel="icon" href="/favicon.svg" />
   </head>
-
   <body>
     <Header />
     <Hero title={entry.title} sub={entry.summary} />
@@ -64,11 +38,17 @@ const price = pricing.routes?.[slug!];
           </p>
           {entry.distanceHint && <p class="text-sm mt-1 opacity-70">Approx: {entry.distanceHint}</p>}
         </section>
-        <section class="mt-6"><h3 class="text-lg font-bold mb-3">Get Your Quote</h3><LeadForm /></section>
-        <section class="mt-6"><h3 class="text-lg font-bold mb-3">FAQs</h3><FAQ items={entry.faqs} /></section>
+        <section class="mt-6">
+          <h3 class="text-lg font-bold mb-3">Get Your Quote</h3>
+          <LeadForm />
+        </section>
+        <section class="mt-6">
+          <h3 class="text-lg font-bold mb-3">FAQs</h3>
+          <FAQ items={entry.faqs} />
+        </section>
       </div>
       <aside class="space-y-4">
-        <div class="card"><strong>Why Axis Cabs?</strong><p class="text-sm mt-2 opacity-80">On‑time guarantee • Clean cars • Professional drivers • GST invoice</p></div>
+        <div class="card"><strong>Why Axis Cabs?</strong><p class="text-sm mt-2 opacity-80">On-time guarantee • Clean cars • Professional drivers • GST invoice</p></div>
       </aside>
     </main>
     <Footer />

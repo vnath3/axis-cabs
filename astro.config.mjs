@@ -1,13 +1,10 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
-// ✅ Use the FUNCTIONS adapter (Node runtime)
-import netlify from '@astrojs/netlify/functions';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
-  site: 'https://axiscabs.com',      // for sitemap/canonicals
-  output: 'server',                  // enable SSR
-  adapter: netlify(),                // build Netlify Function for SSR
+  site: 'https://axiscabs.com',
+  output: 'static', // ← pre-render everything
   integrations: [tailwind({ applyBaseStyles: true })],
   vite: {
     resolve: {
