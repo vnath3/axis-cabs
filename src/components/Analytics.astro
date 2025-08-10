@@ -1,18 +1,41 @@
 ---
-const GA4 = import.meta.env.PUBLIC_GA4_ID || '';
+/**
+ * GA4 loader with queue flush.
+ * Put <Analytics /> inside <head> on every page.
+ *
+ * Needs:
+ * - PUBLIC_GA4_ID set in Netlify site env
+ */
+const GA4_ID = import.meta.env.PUBLIC_GA4_ID || '';
+const isDebug = new URL(Astro.request.url).searchParams.get('debug') === '1';
 ---
-
-{GA4 && (
+{GA4_ID && (
   <>
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4}`}></script>
+    <!-- GA4 base -->
+    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`}></script>
+
+    <!-- Init gtag (uses real GA4_ID and boolean debug_mode) -->
     <script is:inline>
-      const GA_ID = "{GA4}";
-      if (GA_ID) {
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', GA_ID);
-      }
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
+      window.gtag = gtag;
+
+      gtag('js', new Date());
+      // IMPORTANT: pass the actual id, not a string literal
+      gtag('config', '${GA4_ID}', {
+        send_page_view: true,
+        // IMPORTANT: boolean, not an object
+        debug_mode: ${isDebug ? 'true' : 'false'}
+      });
+    </script>
+
+    <!-- Flush queued events after GA is ready -->
+    <script hoist>
+      import { flushGaQueue } from '@/lib/ga';
+      const tryFlush = () => { try { flushGaQueue(); } catch {} };
+      window.addEventListener('load', tryFlush);
+      setTimeout(tryFlush, 400);
+      setTimeout(tryFlush, 1200);
     </script>
   </>
 )}
