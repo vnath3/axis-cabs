@@ -1,6 +1,16 @@
+---
+/**
+ * Mobile sticky CTAs
+ * - "Get Quote" scrolls to form
+ * - WhatsApp opens chat with a default prefilled message
+ */
+const WA = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
+const DEFAULT_TEXT = encodeURIComponent('Hi Axis Cabs, I need a cab quote.');
+const waHref = `https://wa.me/${WA}?text=${DEFAULT_TEXT}`;
+---
 <div class="fixed bottom-4 inset-x-0 px-4 md:hidden">
   <div class="mx-auto max-w-md grid grid-cols-2 gap-3">
-    <a href="#lead" class="btn-primary">Get Quote</a>
-    <a href="https://wa.me/919922333305" class="inline-flex items-center justify-center rounded-xl border border-primary font-semibold bg-white">WhatsApp</a>
+    <a href="#lead-form" class="btn-primary">Get Quote</a>
+    <a href={waHref} class="inline-flex items-center justify-center rounded-xl border border-primary font-semibold bg-white">WhatsApp</a>
   </div>
 </div>
