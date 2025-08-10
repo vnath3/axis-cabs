@@ -7,23 +7,36 @@
 const WA = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
 const DEFAULT_TEXT = encodeURIComponent('Hi Axis Cabs, I need a cab quote.');
 const waHref = `https://wa.me/${WA}?text=${DEFAULT_TEXT}`;
+
 const nav = [
   { href: '/', label: 'Home' },
   { href: '/city-to-city/pune-to-mumbai-cab', label: 'Routes' },
   { href: '/packages/ajanta-ellora-2-day-itinerary', label: 'Packages' },
-  { href: '/hidden-gems/ellora-secret-viewpoints', label: 'Hidden Gems' }
+  { href: '/hidden-gems/ellora-secret-viewpoints', label: 'Hidden Gems' },
 ];
 ---
+
 <header class="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-black/5">
   <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-    <a href="/" class="flex items-center gap-2">
-      <img src="/favicon.svg" alt="Axis Cabs" class="h-8 w-8" />
-      <span class="font-semibold">Axis Cabs</span>
+    <a href="/" class="flex items-center gap-2" aria-label="Axis Cabs — Home">
+      <!-- Use your site-wide logo -->
+      <img
+        src="/logo.svg"
+        alt="Axis Cabs Logo"
+        class="h-10 w-auto"
+        loading="eager"
+        decoding="async"
+      />
+      <span class="sr-only">Axis Cabs</span>
     </a>
+
     <nav class="hidden md:flex items-center gap-6">
-      {nav.map((n) => <a class="hover:underline" href={n.href}>{n.label}</a>)}
+      {nav.map((n) => (
+        <a class="hover:underline" href={n.href}>{n.label}</a>
+      ))}
     </nav>
-    <!-- Header CTA now includes a simple prefill -->
+
+    <!-- Header CTA (prefilled WhatsApp) -->
     <a href={waHref} class="btn-primary">WhatsApp</a>
   </div>
 </header>
