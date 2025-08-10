@@ -1,24 +1,30 @@
 ---
 /**
- * Lead form (hardened)
- * - Uses Supabase (anon) from our singleton client
- * - Adds a "honeypot" field to catch simple spam bots
- * - Shows helpful, human-friendly status messages
- * - Keeps browser-native validation (required fields)
+ * Axis Cabs — Lead form (MVP+ UX)
  *
- * NOTE:
- * - PUBLIC_WHATSAPP_NUMBER/Tailwind classes are already set in your project
- * - The Supabase insert relies on RLS allowing anon INSERT to public.leads
+ * What this does:
+ * - Browser-native validation first (required fields)
+ * - Honeypot field to reduce basic bot spam
+ * - Saves to Supabase (anon) using our singleton client
+ * - Shows clear success/error messages
+ * - Disables buttons while saving (prevents double submissions)
+ * - Resets form after success (so it’s ready for the next lead)
+ *
+ * Dependencies:
+ * - PUBLIC_WHATSAPP_NUMBER (browser-exposed env)
+ * - Supabase client: '@/lib/SupabaseClient'
+ *
+ * Security assumptions (correct for this MVP):
+ * - You expose ONLY the ANON key in PUBLIC_SUPABASE_ANON_KEY
+ * - Row Level Security (RLS) is enabled on public.leads
+ * - A policy allows anon INSERT to public.leads
  */
-import { getSupabaseClient } from '@/lib/SupabaseClient';
-
-// Precompute & inject WA number as digits only (e.g. +91… -> 9199…)
 const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
 ---
 
 <form id="lead-form" class="card">
   <div class="grid md:grid-cols-2 gap-4">
-    <!-- Visible fields -->
+    <!-- Core fields -->
     <input required name="from_city" placeholder="From City" class="border rounded-xl px-4 py-3" />
     <input required name="to_city" placeholder="To City" class="border rounded-xl px-4 py-3" />
     <input required name="date" type="date" class="border rounded-xl px-4 py-3" />
@@ -29,68 +35,83 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
     <input required name="whatsapp" placeholder="WhatsApp (+91...)" class="border rounded-xl px-4 py-3" />
     <textarea name="notes" placeholder="Notes (optional)" class="md:col-span-2 border rounded-xl px-4 py-3"></textarea>
 
-    <!-- HONEYPOT: hidden to humans; bots often fill everything and will trip this -->
+    <!-- HONEYPOT (hidden to humans; bots often fill every input) -->
     <input name="website" tabindex="-1" autocomplete="off" class="hidden" />
   </div>
 
   <div class="mt-4 flex gap-3">
-    <button type="button" class="btn-primary" id="btn-wa">Get Instant Quote on WhatsApp</button>
-    <button type="button" class="inline-flex items-center px-5 py-3 rounded-xl border border-primary font-semibold" id="btn-submit">Submit</button>
+    <!-- Important: type="button" so native form submit is never triggered -->
+    <button type="button" class="btn-primary" id="btn-wa" aria-live="polite">Get Instant Quote on WhatsApp</button>
+    <button type="button" class="inline-flex items-center px-5 py-3 rounded-xl border border-primary font-semibold" id="btn-submit" aria-live="polite">Submit</button>
   </div>
 
-  <!-- Status line for UX messages -->
-  <p id="msg" class="mt-3 text-sm"></p>
+  <!-- Status area for messages -->
+  <p id="msg" class="mt-3 text-sm" role="status" aria-live="polite"></p>
 
-  <!-- IMPORTANT: 'hoist' so Vite bundles this (alias '@/...' will resolve) -->
+  <!-- Hoisted so Vite bundles imports and resolves the '@/...' alias -->
   <script hoist>
     import { getSupabaseClient } from '@/lib/SupabaseClient';
 
     (function initAxisLeadForm() {
-      // Single Supabase client (anon, RLS enforced server-side)
       const db = getSupabaseClient();
 
-      // Cache DOM refs
-      const formEl   = document.getElementById('lead-form');
+      // Cache nodes
+      const formEl    = document.getElementById('lead-form');
       if (!formEl) return; // defensive
 
-      const btnWa    = formEl.querySelector('#btn-wa');
-      const btnSubmit= formEl.querySelector('#btn-submit');
-      const msg      = formEl.querySelector('#msg');
+      const btnWa     = formEl.querySelector('#btn-wa');
+      const btnSubmit = formEl.querySelector('#btn-submit');
+      const msg       = formEl.querySelector('#msg');
 
-      // UX helpers
+      // ---- Small helpers ----------------------------------------------------
+
       function setMsg(text, isError = false) {
         msg.textContent = text;
         msg.classList.toggle('text-red-600', isError);
         msg.classList.toggle('text-green-700', !isError);
       }
-      function busy(el, on) {
-        el.disabled = on;
-        el.classList.toggle('opacity-60', on);
+
+      function setBusy(on) {
+        // disable both CTAs, add subtle visual feedback
+        for (const el of [btnWa, btnSubmit]) {
+          el.disabled = on;
+          el.classList.toggle('opacity-60', on);
+          el.classList.toggle('cursor-not-allowed', on);
+        }
       }
 
-      // Core insert that all callers use (WA + Submit)
-      async function insertLead() {
-        // Enforce browser-native 'required' validation first
-        if (!formEl.reportValidity()) throw new Error('Please fill the required fields.');
+      function resetForm() {
+        // Reset visible inputs; keep UX simple
+        formEl.reset();
+      }
+
+      // Return URLSearchParams helper (for UTM capture)
+      function qs(key) {
+        return new URLSearchParams(location.search).get(key) || '';
+      }
+
+      // ---- Core insert used by both buttons --------------------------------
+
+      async function insertLeadOrThrow() {
+        // Enforce browser-native "required"
+        if (!formEl.reportValidity()) {
+          throw new Error('Please fill all required fields.');
+        }
 
         const fd = new FormData(formEl);
         const payload = Object.fromEntries(fd.entries());
 
-        // HONEYPOT: if 'website' is filled, it's likely a bot. Pretend success, do nothing.
+        // HONEYPOT: if filled, treat as success but do nothing
         if (payload.website) return payload;
 
-        // Minimal manual validation for robustness
+        // Minimal extra validation (nice safety net)
         const req = ['from_city','to_city','date','time','pax','name','whatsapp'];
-        for (const k of req) {
-          if (!payload[k]) throw new Error(`Missing ${k}`);
-        }
+        for (const k of req) if (!payload[k]) throw new Error(`Missing ${k}`);
 
-        // Optional: capture UTM from URL (MVP-lite)
-        const qs = new URLSearchParams(location.search);
-        payload.utm_source   = payload.utm_source   || qs.get('utm_source')   || '';
-        payload.utm_campaign = payload.utm_campaign || qs.get('utm_campaign') || '';
+        // Attach UTM values from URL (if present)
+        payload.utm_source   = payload.utm_source   || qs('utm_source');
+        payload.utm_campaign = payload.utm_campaign || qs('utm_campaign');
 
-        // Insert into Supabase (RLS must allow anon INSERT)
         const { error } = await db.from('leads').insert({
           source: 'web',
           from_city: payload.from_city,
@@ -102,53 +123,61 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
           name: payload.name,
           whatsapp: payload.whatsapp,
           notes: payload.notes || '',
-          utm_source: payload.utm_source,
-          utm_campaign: payload.utm_campaign
+          utm_source: payload.utm_source || '',
+          utm_campaign: payload.utm_campaign || ''
         });
 
         if (error) {
-          // Surface a helpful message to users; keep details in console
+          // Produce a friendly message. Do not leak internals to users, log to console for us.
           console.error('[Lead insert failed]', error);
-          throw new Error('We couldn’t save your details. Please try again or contact us on WhatsApp.');
+          const hint = error?.message?.toLowerCase().includes('policy')
+            ? ' (permission issue — RLS policy?)'
+            : '';
+          throw new Error('We couldn’t save your details. Please try again or WhatsApp us.' + hint);
         }
 
         return payload;
       }
 
-      // WhatsApp CTA — save lead then open WhatsApp with prefilled details
+      // ---- Event handlers ---------------------------------------------------
+
       btnWa.addEventListener('click', async () => {
         setMsg('');
-        busy(btnWa, true);
+        setBusy(true);
         try {
-          const lead = await insertLead();
-          const wa = ('${WA_NUM}');
+          const lead = await insertLeadOrThrow();
+
+          // Build WhatsApp prefill text from lead data
           const t =
             `Ride request:%0AFrom: ${encodeURIComponent(lead.from_city)}` +
             `%0ATo: ${encodeURIComponent(lead.to_city)}` +
             `%0ADate/Time: ${encodeURIComponent(lead.date)} ${encodeURIComponent(lead.time)}` +
             `%0APax/Bags: ${encodeURIComponent(lead.pax)}/${encodeURIComponent(lead.bags || '0')}` +
             `%0ANotes: ${encodeURIComponent(lead.notes || '')}`;
-          window.location.href = `https://wa.me/${wa}?text=${t}`;
+
+          // Clear form so the page looks "fresh" after redirect back
+          resetForm();
+
+          // Open WhatsApp
+          window.location.href = `https://wa.me/${'${WA_NUM}'}?text=${t}`;
         } catch (e) {
-          console.error(e);
           setMsg(e?.message || 'Network error. Try again.', true);
         } finally {
-          busy(btnWa, false);
+          setBusy(false);
         }
       });
 
-      // Submit CTA — save lead and confirm inline
       btnSubmit.addEventListener('click', async () => {
         setMsg('');
-        busy(btnSubmit, true);
+        setBusy(true);
         try {
-          await insertLead();
+          await insertLeadOrThrow();
           setMsg('Thanks! Our team will contact you shortly.');
+          resetForm();
         } catch (e) {
-          console.error(e);
           setMsg(e?.message || 'Network error. Try again.', true);
         } finally {
-          busy(btnSubmit, false);
+          setBusy(false);
         }
       });
     })();
