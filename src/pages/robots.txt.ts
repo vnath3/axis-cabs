@@ -23,7 +23,7 @@ export const GET: APIRoute = () => {
 'User-agent: *',
 'Allow: /',
 '',
-'Sitemap: https://axis-cabs.netlify.app/sitemap.xml',
+'Sitemap: https://axiscabs.com/sitemap.xml',
     ''
 ].join('\n');
 
