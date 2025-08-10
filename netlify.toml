@@ -1,10 +1,26 @@
-# netlify.toml
 [build]
-  command = "npm run build"
-  publish = "dist"
+command = "npm run build"
+publish = "dist"
 
 [functions]
-  node_bundler = "esbuild"
+node_bundler = "esbuild"
 
 [build.environment]
-  NODE_VERSION = "20"
+NODE_VERSION = "18"
+
+[[redirects]]
+from = "/*"
+to = "/.netlify/functions/astro-ssr"
+status = 200
+force = true
+
+## netlify.toml
+#[build]
+#  command = "npm run build"
+#  publish = "dist"
+#
+#[functions]
+#  node_bundler = "esbuild"
+#
+#[build.environment]
+#  NODE_VERSION = "20"
