@@ -1,0 +1,67 @@
+---
+/** Base layout: canonical + GA + sensible defaults */
+export interface Props {
+  title?: string;
+  description?: string;
+  canonical?: string;   // optional manual override
+  ogImage?: string;
+}
+const { title, description, canonical: canonicalProp, ogImage } = Astro.props;
+
+// Build canonical from the live request URL (SSR) or Astro.site fallback
+const SITE = (Astro.site ?? new URL('https://axiscabs.com'));
+const path = Astro.url?.pathname ?? '/';
+const computed = new URL(path, SITE);
+if (path !== '/' && computed.pathname.endsWith('/')) computed.pathname = computed.pathname.slice(0, -1);
+const canonical = canonicalProp || computed.href;
+
+// Meta defaults (override per page via props)
+const metaTitle = title ?? 'Axis Cabs — Outstation & City Rides';
+const metaDesc  = description ?? 'Reliable cabs for city & outstation trips. Clean cars, pro drivers, fair pricing.';
+const metaImg   = ogImage ?? `${SITE.origin}/og-default.jpg`;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{metaTitle}</title>
+    <meta name="description" content={metaDesc} />
+    <link rel="canonical" href={canonical} />
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:title" content={metaTitle} />
+    <meta property="og:description" content={metaDesc} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={metaImg} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Favicons (adjust paths if needed) -->
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- GA (single place) -->
+    <!-- If you already have an <Analytics /> component, import and render it here -->
+    <script is:inline>
+      // guard: only load GA if PUBLIC_GA4_ID exists
+      (function(){
+        const id = import.meta.env.PUBLIC_GA4_ID;
+        if(!id) return;
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);} window.gtag = gtag;
+        gtag('js', new Date()); gtag('config', id);
+        var s=document.createElement('script');
+        s.async=1; s.src='https://www.googletagmanager.com/gtag/js?id='+id;
+        document.head.appendChild(s);
+      })();
+    </script>
+
+    <!-- place for page-specific extra head tags -->
+    <slot name="head" />
+  </head>
+  <body class="min-h-screen antialiased">
+    <slot />
+  </body>
+</html>
