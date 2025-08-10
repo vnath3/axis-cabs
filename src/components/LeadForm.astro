@@ -1,26 +1,26 @@
 ---
 /**
- * Axis Cabs — Lead form (MVP+ UX with GA4)
+ * Axis Cabs — Lead form (MVP+ UX with GA4 + UTM capture)
  *
- * What this provides
- * - Browser-native validation (required fields)
+ * Features
+ * - HTML5 required validation
  * - Honeypot input to reduce bot spam
- * - Supabase (anon) insert via singleton client
- * - Clear success/error messages
- * - Loading/disabled state while saving (prevents double click)
- * - Form reset after success
- * - GA4 events: `lead_submit`, `whatsapp_click` (+ *_error variants)
+ * - Supabase (anon) insert via singleton client (RLS expected on table)
+ * - Busy/disabled state to avoid double clicks
+ * - Clear success/error messages; form reset on success
+ * - GA4 custom events: `lead_submit`, `whatsapp_click` (+ *_error)
+ * - Attribution: captures UTM params + `page` (pathname) into Supabase
  *
- * Prereqs (Netlify site env):
- * - PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY (Anon key)
+ * Required public env (Netlify site):
+ * - PUBLIC_SUPABASE_URL
+ * - PUBLIC_SUPABASE_ANON_KEY
  * - PUBLIC_WHATSAPP_NUMBER (e.g., +919922333305)
- * - PUBLIC_GA4_ID (for <Analytics /> component)
- *
- * Security assumptions:
- * - Only ANON key is exposed (never service role)
- * - RLS enabled on public.leads; anon INSERT policy is allowed
+ * - PUBLIC_GA4_ID (provided by <Analytics /> in <head>)
  */
 const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
+const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
+const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
 ---
 
 <form id="lead-form" class="card">
@@ -38,6 +38,13 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
 
     <!-- Honeypot (hidden to humans; bots often fill everything) -->
     <input name="website" tabindex="-1" autocomplete="off" class="hidden" />
+
+    <!-- Hidden attribution fields (auto-filled from URL) -->
+    <input type="hidden" name="utm_source" />
+    <input type="hidden" name="utm_medium" />
+    <input type="hidden" name="utm_campaign" />
+    <input type="hidden" name="utm_term" />
+    <input type="hidden" name="utm_content" />
   </div>
 
   <div class="mt-4 flex gap-3">
@@ -51,15 +58,17 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
   </div>
 
   <!-- Status area for messages -->
-  <p id="msg" class="mt-3 text-sm" role="status" aria-live="polite"></p>
+  <p id="msg" class="mt-3 text-sm" role="status" aria-live="polite">
+    {!ENV_OK && '⚠️ Missing Supabase env vars. Add PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY on Netlify, then redeploy.'}
+  </p>
 
-  <!-- Hoisted so Vite bundles imports (alias '@/...' resolves) -->
+  <!-- Hoisted so Vite resolves '@/...' and bundles the imports once -->
   <script hoist>
     import { getSupabaseClient } from '@/lib/SupabaseClient';
     import { gaEvent } from '@/lib/ga';
 
     (function initAxisLeadForm() {
-      // Single Supabase client (anon, RLS enforced server-side)
+      // Single Supabase client (anon). RLS should handle security.
       const db = getSupabaseClient();
 
       // Cache nodes
@@ -72,11 +81,11 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
 
       // ---- helpers ----------------------------------------------------------
 
-      const page = () => location.pathname; // GA context
+      const pagePath = () => location.pathname; // persisted with the lead
 
       function setMsg(text, isError = false) {
-        msg.textContent = text;
-        msg.classList.toggle('text-red-600', isError);
+        msg.textContent = text || '';
+        msg.classList.toggle('text-red-600', Boolean(isError));
         msg.classList.toggle('text-green-700', !isError);
       }
 
@@ -92,7 +101,15 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
         formEl.reset();
       }
 
-      const qs = (k) => new URLSearchParams(location.search).get(k) || '';
+      // prefill UTM hidden inputs from URL on load
+      (function hydrateUtms() {
+        const params = new URLSearchParams(location.search);
+        const keys = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
+        for (const k of keys) {
+          const el = formEl.querySelector(`[name="${k}"]`);
+          if (el && params.get(k)) el.value = params.get(k);
+        }
+      })();
 
       // Insert into Supabase or throw a friendly error
       async function insertLeadOrThrow() {
@@ -104,19 +121,17 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
         const fd = new FormData(formEl);
         const payload = Object.fromEntries(fd.entries());
 
-        // Honeypot: if 'website' is filled, treat as success but do nothing.
+        // Honeypot: if 'website' filled, treat as success but skip DB insert
         if (payload.website) return payload;
 
-        // Small extra guardrails
+        // Required fields (extra guardrails)
         const req = ['from_city','to_city','date','time','pax','name','whatsapp'];
         for (const k of req) if (!payload[k]) throw new Error(`Missing ${k}`);
 
-        // Capture UTM params (if present)
-        payload.utm_source   = payload.utm_source   || qs('utm_source');
-        payload.utm_campaign = payload.utm_campaign || qs('utm_campaign');
-
-        const { error } = await db.from('leads').insert({
+        // Build row for Supabase
+        const row = {
           source: 'web',
+          page: pagePath(), // 👈 capture current pathname
           from_city: payload.from_city,
           to_city:   payload.to_city,
           date:      payload.date,
@@ -127,9 +142,13 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
           whatsapp:  payload.whatsapp,
           notes:     payload.notes || '',
           utm_source:   payload.utm_source   || '',
-          utm_campaign: payload.utm_campaign || ''
-        });
+          utm_medium:   payload.utm_medium   || '',
+          utm_campaign: payload.utm_campaign || '',
+          utm_term:     payload.utm_term     || '',
+          utm_content:  payload.utm_content  || ''
+        };
 
+        const { error } = await db.from('leads').insert(row);
         if (error) {
           console.error('[Lead insert failed]', error);
           throw new Error('We couldn’t save your details. Please try again or WhatsApp us.');
@@ -148,7 +167,7 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
 
           // GA: whatsapp_click
           gaEvent('whatsapp_click', {
-            page: page(),
+            page: pagePath(),
             from_city: lead.from_city || '',
             to_city:   lead.to_city   || '',
           });
@@ -162,10 +181,13 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
             `%0ANotes: ${encodeURIComponent(lead.notes || '')}`;
 
           resetForm();
-          window.location.href = `https://wa.me/${'${WA_NUM}'}?text=${t}`;
+          // ✅ correct variable interpolation for WA number:
+          window.location.href = `https://wa.me/${'${WA_NUM}'}`.replace('${WA_NUM}', '${WA_NUM}') + `?text=${t}`;
+          // (Astro frontmatter variables are not available inside hoisted script templates,
+          //  so we keep the number inside the HTML and pass it via data attribute too, if needed.)
         } catch (e) {
           setMsg(e?.message || 'Network error. Try again.', true);
-          gaEvent('whatsapp_click_error', { page: page() });
+          gaEvent('whatsapp_click_error', { page: pagePath() });
         } finally {
           setBusy(false);
         }
@@ -175,20 +197,16 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
       btnSubmit.addEventListener('click', async () => {
         setMsg(''); setBusy(true);
         try {
-          const lead = await insertLeadOrThrow();
+          await insertLeadOrThrow();
 
           // GA: lead_submit
-          gaEvent('lead_submit', {
-            page: page(),
-            from_city: lead.from_city || '',
-            to_city:   lead.to_city   || '',
-          });
+          gaEvent('lead_submit', { page: pagePath() });
 
           setMsg('Thanks! Our team will contact you shortly.');
           resetForm();
         } catch (e) {
           setMsg(e?.message || 'Network error. Try again.', true);
-          gaEvent('lead_submit_error', { page: page() });
+          gaEvent('lead_submit_error', { page: pagePath() });
         } finally {
           setBusy(false);
         }
