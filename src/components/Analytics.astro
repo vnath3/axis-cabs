@@ -1,29 +1,28 @@
 ---
 /**
- * Robust GA4 loader for Astro
+ * Robust GA4 loader (client-safe)
  * - Loads gtag.js
  * - Defines window.gtag and sends config
- * - Flushes queued events (from ga.ts)
+ * - Flushes queued events from ga.ts
  *
  * Add <Analytics /> inside <head> on every page.
  */
-const GA4_ID = import.meta.env.PUBLIC_GA4_ID || '';
-const isDebug = new URL(Astro.request.url).searchParams.get('debug') === '1';
+const HAS_ID = Boolean(import.meta.env.PUBLIC_GA4_ID); // only render tag when ID exists
 ---
-{GA4_ID && (
+{HAS_ID && (
   <>
     <!-- GA4 base library -->
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`}></script>
+    <script async src={`https://www.googletagmanager.com/gtag/js?id=${import.meta.env.PUBLIC_GA4_ID}`}></script>
 
-    <!-- Single hoisted module to define gtag + config + flush -->
+    <!-- Hoisted module: define gtag, config with PUBLIC_GA4_ID, flush queue -->
     <script hoist>
       import { flushGaQueue } from '@/lib/ga';
 
-      // Inject env values as real JS literals
-      const GA_ID = {JSON.stringify(GA4_ID)};
-      const DEBUG = {isDebug};
+      // Read public env on the client
+      const GA_ID  = import.meta.env.PUBLIC_GA4_ID || '';
+      const DEBUG  = new URLSearchParams(location.search).get('debug') === '1';
 
-      // Define dataLayer and gtag BEFORE the GA library runs
+      // Define dataLayer/gtag BEFORE GA library executes
       window.dataLayer = window.dataLayer || [];
       function gtag(){ window.dataLayer.push(arguments); }
       window.gtag = gtag;
@@ -32,13 +31,12 @@ const isDebug = new URL(Astro.request.url).searchParams.get('debug') === '1';
       gtag('js', new Date());
       gtag('config', GA_ID, { send_page_view: true, debug_mode: DEBUG });
 
-      // Flush any queued custom events
+      // Flush queued custom events (from ga.ts)
       const tryFlush = () => { try { flushGaQueue(); } catch {} };
       window.addEventListener('load', tryFlush);
       setTimeout(tryFlush, 400);
       setTimeout(tryFlush, 1200);
 
-      // Helpful console breadcrumb while debugging
       console.log('[GA] configured', { GA_ID, DEBUG });
     </script>
   </>
