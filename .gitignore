@@ -1,3 +1,28 @@
-".env" 
-"node_modules/" 
-".env" 
+# dependencies & build
+node_modules/
+dist/
+build/
+.out/
+.astro/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# editor/OS cruft
+.idea/
+.vscode/
+.DS_Store
+
+# logs & caches
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.cache/
+coverage/
+
+# hosting/platform
+.netlify/
+.vercel/
