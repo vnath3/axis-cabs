@@ -1,10 +1,22 @@
----
-/**
- * Generic JSON‑LD injector
- * Usage: <JsonLd data={object} />
- */
-interface Props { data: Record<string, any> }
-const { data } = Astro.props;
-const json = JSON.stringify(data, null, 0);
----
-<script type="application/ld+json" is:inline>{json}</script>
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"Organization",
+  "name":"Axis Cabs",
+  "url":"https://axiscabs.com",
+  "logo":"https://axiscabs.com/favicon.svg"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"WebSite",
+  "url":"https://axiscabs.com",
+  "name":"Axis Cabs",
+  "potentialAction":{
+    "@type":"SearchAction",
+    "target":"https://axiscabs.com/search?q={query}",
+    "query-input":"required name=query"
+  }
+}
+</script>

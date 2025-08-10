@@ -7,3 +7,15 @@ node_bundler = "esbuild"
 
 [build.environment]
 NODE_VERSION = "20"
+
+# Cache static assets aggressively
+[[headers]]
+for = "/assets/*"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+# Don’t cache HTML
+[[headers]]
+for = "/*"
+[headers.values]
+Cache-Control = "no-cache"
