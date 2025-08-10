@@ -1,6 +1,17 @@
 ---
+/**
+ * Hero section
+ * - Primary CTA: scrolls to form (#lead-form)
+ * - Secondary CTA: opens WhatsApp with a default prefilled message
+ * - Uses PUBLIC_WHATSAPP_NUMBER
+ */
 interface Props { title: string; sub?: string; image?: string }
 const { title, sub } = Astro.props;
+
+// WhatsApp with prefilled generic text
+const WA = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
+const DEFAULT_TEXT = encodeURIComponent('Hi Axis Cabs, I need a cab quote.');
+const waHref = `https://wa.me/${WA}?text=${DEFAULT_TEXT}`;
 ---
 <section class="relative">
   <div class="mx-auto max-w-6xl px-4 py-10 grid md:grid-cols-2 gap-8 items-center">
@@ -8,13 +19,15 @@ const { title, sub } = Astro.props;
       <h1 class="text-3xl md:text-5xl font-extrabold leading-tight">{title}</h1>
       {sub && <p class="mt-4 text-lg opacity-80">{sub}</p>}
       <div class="mt-6 flex gap-3">
-        <a href="#lead" class="btn-primary">Get My Quote</a>
-        <a href="https://wa.me/919922333305" class="inline-flex items-center px-5 py-3 rounded-xl border border-primary font-semibold">Chat on WhatsApp</a>
+        <!-- FIX: anchor now points to the actual form id -->
+        <a href="#lead-form" class="btn-primary">Get My Quote</a>
+        <!-- FIX: WhatsApp prefilled message -->
+        <a href={waHref} class="inline-flex items-center px-5 py-3 rounded-xl border border-primary font-semibold">Chat on WhatsApp</a>
       </div>
     </div>
     <div class="hidden md:block">
       <div class="card">
-        <p class="text-sm">Trusted by 5,000+ travellers • 24×7 support • GPS‑tracked</p>
+        <p class="text-sm">Trusted by 5,000+ travellers • 24×7 support • GPS-tracked</p>
       </div>
     </div>
   </div>
