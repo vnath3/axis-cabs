@@ -6,6 +6,8 @@ import Hero from '@/components/Hero.astro';
 import { gems } from '@/data/gems';
 import LeadForm from '@/components/LeadForm.astro';
 import Analytics from '@/components/Analytics.astro';
+import JsonLd from '@/components/JsonLd.astro';
+const url = `https://axis-cabs.netlify.app/hidden-gems/${slug}`;
 
 export async function getStaticPaths() {
   return gems.map((g) => ({ params: { slug: g.slug } }));
@@ -22,6 +24,13 @@ if (!entry) return Astro.redirect('/');
     <title>{entry.title}</title>
     <meta name="description" content={entry.summary} />
     <link rel="icon" href="/favicon.svg" />
+        <JsonLd data={{
+          "@context":"https://schema.org",
+          "@type":"Article",
+          "headline": entry.title,
+          "description": entry.summary,
+          "url": url
+        }} />
     <Analytics />
   </head>
   <body>

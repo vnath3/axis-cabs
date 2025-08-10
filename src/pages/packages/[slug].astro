@@ -7,6 +7,13 @@ import LeadForm from '@/components/LeadForm.astro';
 import { packages } from '@/data/packages';
 import pricing from '@/data/pricing.json';
 import Analytics from '@/components/Analytics.astro';
+import JsonLd from '@/components/JsonLd.astro';
+const url = `https://axis-cabs.netlify.app/packages/${slug}`;
+const crumbs = [
+  { name: "Home", url: "https://axis-cabs.netlify.app/" },
+  { name: "Packages", url: "https://axis-cabs.netlify.app/" },
+  { name: entry.title, url }
+];
 
 // REQUIRED for dynamic static pages:
 export async function getStaticPaths() {
@@ -21,7 +28,13 @@ const band = pricing.packages?.[slug!];
 <html lang="en">
    <head>
      <meta charset="utf-8" />
-     ...
+        <JsonLd data={{
+           "@context":"https://schema.org",
+           "@type":"BreadcrumbList",
+           "itemListElement": crumbs.map((c, i) => ({
+             "@type":"ListItem", "position": i+1, "name": c.name, "item": c.url
+           }))
+         }} />
      <Analytics />
    </head>
   <body>

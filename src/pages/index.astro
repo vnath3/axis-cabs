@@ -6,6 +6,9 @@ import Hero from '@/components/Hero.astro';
 import LeadForm from '@/components/LeadForm.astro';
 import StickyCTAs from '@/components/StickyCTAs.astro';
 import Analytics from '@/components/Analytics.astro';
+import JsonLd from '@/components/JsonLd.astro';
+const brand = 'Axis Cabs';
+const site = 'https://axis-cabs.netlify.app';
 ---
 <html lang="en">
   <head>
@@ -17,6 +20,25 @@ import Analytics from '@/components/Analytics.astro';
     <meta property="og:title" content="Axis Cabs" />
     <meta property="og:description" content="Cabs & itineraries across India. Get instant WhatsApp quote." />
     <meta property="og:image" content="/og-default.jpg" />
+    <JsonLd data={{
+          "@context": "https://schema.org",
+          "@type": "TaxiService",
+          "name": brand,
+          "url": site,
+          "areaServed": "India",
+          "telephone": "+91 99223 33305",
+          "sameAs": [
+            // add socials later if you have them
+          ],
+          "providerMobility": "Taxi",
+          "serviceType": "Intercity cab, tour packages, airport transfers"
+        }} />
+        <JsonLd data={{
+          "@context":"https://schema.org",
+          "@type":"WebSite",
+          "name": brand,
+          "url": site
+        }} />
     <Analytics />
   </head>
   <body>
