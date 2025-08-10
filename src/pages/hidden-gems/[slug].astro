@@ -5,6 +5,7 @@ import Footer from '@/components/Footer.astro';
 import Hero from '@/components/Hero.astro';
 import { gems } from '@/data/gems';
 import LeadForm from '@/components/LeadForm.astro';
+import Analytics from '@/components/Analytics.astro';
 
 export async function getStaticPaths() {
   return gems.map((g) => ({ params: { slug: g.slug } }));

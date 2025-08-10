@@ -7,6 +7,7 @@ import LeadForm from '@/components/LeadForm.astro';
 import FAQ from '@/components/FAQ.astro';
 import { routes } from '@/data/routes';
 import pricing from '@/data/pricing.json';
+import Analytics from '@/components/Analytics.astro';
 
 export async function getStaticPaths() {
   return routes.map((r) => ({ params: { slug: r.slug } }));
