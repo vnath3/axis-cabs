@@ -19,3 +19,5 @@ Cache-Control = "public, max-age=31536000, immutable"
 for = "/*"
 [headers.values]
 Cache-Control = "no-cache"
+
+

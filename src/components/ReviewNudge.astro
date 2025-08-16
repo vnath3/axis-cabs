@@ -1,0 +1,252 @@
+---
+/**
+ * ReviewNudge.astro
+ * Same approach you have; only FN base wiring changed.
+ */
+const GOOGLE_REVIEW_URL = import.meta.env.PUBLIC_GOOGLE_REVIEW_URL || '';
+// SERVER value (dev => /api, prod => /.netlify/functions, or override with PUBLIC_FUNCTIONS_BASE)
+const FN_BASE =
+  import.meta.env.PUBLIC_FUNCTIONS_BASE ||
+  (import.meta.env.DEV ? '/api' : '/.netlify/functions');
+---
+<div
+  id="ac-review-nudge" class="fixed inset-x-0 bottom-0 z-40 md:inset-auto md:right-6 md:bottom-6 md:w-[380px] transform translate-y-full md:translate-y-0 md:opacity-0 transition-all duration-300"
+  aria-live="polite"
+  data-fn-base={FN_BASE}   <!-- NEW: inject server computed base as data-attr -->
+>
+  <div class="mx-3 mb-3 md:m-0 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 p-4 md:p-5 text-slate-800">
+    <div class="flex items-start gap-3">
+      <div class="shrink-0 rounded-xl bg-slate-100 p-2">🗨️</div>
+      <div class="grow">
+        <p class="font-semibold">How was your experience with Axis Cabs?</p>
+        <p class="text-sm text-slate-600">Your quick feedback helps us improve.</p>
+
+        <!-- Step 1 -->
+        <div id="ac-step1" class="mt-3 flex items-center gap-3">
+          <button id="ac-thumb-up"
+                  class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  aria-label="Thumbs up">
+            👍 <span class="text-sm">Good</span>
+          </button>
+          <button id="ac-thumb-down"
+                  class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  aria-label="Thumbs down">
+            👎 <span class="text-sm">Could be better</span>
+          </button>
+        </div>
+
+        <!-- Step 2: Form -->
+        <form id="ac-form" class="mt-3 hidden">
+          <label class="block text-sm font-medium mb-1">Rating <span class="text-rose-600">*</span></label>
+          <div id="ac-stars" class="flex gap-1" role="radiogroup" aria-label="Star rating">
+            <button type="button" data-star="1" aria-label="1 star" class="ac-star text-2xl">☆</button>
+            <button type="button" data-star="2" aria-label="2 stars" class="ac-star text-2xl">☆</button>
+            <button type="button" data-star="3" aria-label="3 stars" class="ac-star text-2xl">☆</button>
+            <button type="button" data-star="4" aria-label="4 stars" class="ac-star text-2xl">☆</button>
+            <button type="button" data-star="5" aria-label="5 stars" class="ac-star text-2xl">☆</button>
+          </div>
+
+          <label class="block text-sm font-medium mt-3 mb-1">Short comment <span class="text-rose-600">*</span></label>
+          <textarea id="ac-comment" rows="3" minlength="20" required
+                    placeholder="Tell us what went well or what we should improve (min 20 characters)"
+                    class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-300"></textarea>
+
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium mb-1">Name (optional)</label>
+              <input id="ac-name" type="text" maxlength="80"
+                     class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-300" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">City (optional)</label>
+              <input id="ac-city" type="text" maxlength="80"
+                     class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-300" />
+            </div>
+          </div>
+
+          <label class="mt-3 inline-flex items-start gap-2 text-sm">
+            <input id="ac-consent" type="checkbox" class="mt-1" />
+            <span>I consent to publish my review (name/city optional).</span>
+          </label>
+
+          <p id="ac-error" class="mt-2 text-sm text-rose-600 hidden"></p>
+
+          <div class="mt-3 flex items-center gap-2">
+            <button id="ac-submit"
+                    class="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              Submit
+            </button>
+            <button type="button" id="ac-cancel" class="text-sm text-slate-600 hover:underline">Dismiss</button>
+          </div>
+        </form>
+
+        <!-- Thanks -->
+        <div id="ac-thanks" class="mt-3 hidden">
+          <p class="text-sm">Thanks for helping us improve!</p>
+          <a id="ac-google-cta" href={GOOGLE_REVIEW_URL} target="_blank" rel="noopener"
+             class="mt-2 inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700 hover:bg-emerald-100"
+             >⭐ Loved it? Share on Google</a>
+        </div>
+      </div>
+
+      <button id="ac-dismiss"
+              class="shrink-0 rounded-lg p-1 text-slate-500 hover:text-slate-700"
+              aria-label="Close">✕</button>
+    </div>
+  </div>
+</div>
+
+<script is:inline type="module">
+(() => {
+  const root = document.getElementById('ac-review-nudge');
+  if (!root) return;
+
+  /** NEW: read the server value safely from data-*; fallback if missing */
+  const FN_BASE = root.getAttribute('data-fn-base')
+    || (['localhost','127.0.0.1','[::1]'].includes(location.hostname) ? '/api' : '/.netlify/functions');
+
+  const KEY_SUPPRESS_UNTIL = 'ac_review_nudge_seen_until';
+  const KEY_SUBMITTED = 'ac_review_submitted';
+  const SUPPRESS_MS = 7 * 24 * 60 * 60 * 1000;
+
+  if (localStorage.getItem(KEY_SUBMITTED) === '1') return;
+  const until = parseInt(localStorage.getItem(KEY_SUPPRESS_UNTIL) || '0', 10);
+  if (Date.now() < until) return;
+
+  let timeOk = false;
+  let scrollOk = false;
+  let showing = false;
+  let selectedStars = 0;
+  let thumbUp = null;
+
+  const step1 = document.getElementById('ac-step1');
+  const form = document.getElementById('ac-form');
+  const thanks = document.getElementById('ac-thanks');
+  const errorEl = document.getElementById('ac-error');
+  const dismissBtn = document.getElementById('ac-dismiss');
+  const cancelBtn = document.getElementById('ac-cancel');
+  const submitBtn = document.getElementById('ac-submit');
+  const starsEl = document.getElementById('ac-stars');
+  const commentEl = document.getElementById('ac-comment');
+  const nameEl = document.getElementById('ac-name');
+  const cityEl = document.getElementById('ac-city');
+  const consentEl = document.getElementById('ac-consent');
+  const googleCta = document.getElementById('ac-google-cta');
+
+  if (!googleCta || !googleCta.getAttribute('href')) {
+    if (googleCta) googleCta.classList.add('hidden');
+  }
+
+  const showCard = () => {
+    if (showing) return;
+    showing = true;
+    root.classList.remove('translate-y-full');
+    root.classList.add('md:opacity-100');
+  };
+  const hideCard = () => {
+    root.classList.add('translate-y-full');
+    root.classList.remove('md:opacity-100');
+    localStorage.setItem(KEY_SUPPRESS_UNTIL, String(Date.now() + SUPPRESS_MS));
+  };
+
+  setTimeout(() => { timeOk = true; maybeShow(); }, 450); // use 450 for quick local testing
+  const onScroll = () => {
+    const doc = document.documentElement;
+    const scrollPos = doc.scrollTop || document.body.scrollTop || 0;
+    const scrollHeight = doc.scrollHeight - doc.clientHeight;
+    if (scrollHeight > 0 && scrollPos / scrollHeight >= 0.5) {
+      scrollOk = true;
+      window.removeEventListener('scroll', onScroll);
+      maybeShow();
+    }
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  function maybeShow() { if (timeOk && scrollOk) showCard(); }
+
+  dismissBtn?.addEventListener('click', hideCard);
+  cancelBtn?.addEventListener('click', hideCard);
+
+  document.getElementById('ac-thumb-up')?.addEventListener('click', () => {
+    thumbUp = true; step1?.classList.add('hidden'); form?.classList.remove('hidden');
+  });
+  document.getElementById('ac-thumb-down')?.addEventListener('click', () => {
+    thumbUp = false; step1?.classList.add('hidden'); form?.classList.remove('hidden');
+  });
+
+  starsEl?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-star]');
+    if (!btn) return;
+    selectedStars = parseInt(btn.dataset.star, 10);
+    document.querySelectorAll('.ac-star').forEach(el => {
+      const s = parseInt(el.getAttribute('data-star'), 10);
+      el.textContent = s <= selectedStars ? '★' : '☆';
+    });
+  });
+
+  function validate() {
+    errorEl?.classList.add('hidden');
+    const msg = (commentEl?.value || '').trim();
+    if (!selectedStars) return 'Please choose a star rating.';
+    if (!msg || msg.length < 20) return 'Please write at least 20 characters.';
+    if (!consentEl?.checked) return 'Please tick the consent box to publish.';
+    return '';
+  }
+
+  async function safeJson(res) {
+    const text = await res.text();
+    try { return JSON.parse(text); } catch { return { ok:false, error: text.slice(0,120) }; }
+  }
+
+  submitBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const err = validate();
+    if (err) { errorEl.textContent = err; errorEl.classList.remove('hidden'); return; }
+    submitBtn.disabled = true;
+    try {
+      const res = await fetch(`${FN_BASE}/reviews-submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: selectedStars,
+          comment: commentEl.value.trim(),
+          name: (nameEl?.value || '').trim(),
+          city: (cityEl?.value || '').trim(),
+          consent: true,
+          thumbUp: !!thumbUp,
+          source: 'web'
+        })
+      });
+      const data = await safeJson(res);
+      if (!res.ok || !data.ok) throw new Error(data?.error || 'Failed to submit review');
+      localStorage.setItem(KEY_SUBMITTED, '1');
+      form?.classList.add('hidden');
+      thanks?.classList.remove('hidden');
+      if (selectedStars === 5 && googleCta && googleCta.getAttribute('href')) {
+        googleCta.classList.remove('hidden');
+      } else if (googleCta) {
+        googleCta.classList.add('hidden');
+      }
+      setTimeout(hideCard, 6000);
+    } catch (err) {
+      errorEl.textContent = err.message || 'Something went wrong.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+})();
+const showCard = () => {
+  if (showing) return;
+  showing = true;
+  root.classList.remove('translate-y-full');
+  root.classList.add('md:opacity-100');
+  root.classList.remove('pointer-events-none'); // add this
+};
+const hideCard = () => {
+  root.classList.add('translate-y-full');
+  root.classList.remove('md:opacity-100');
+  root.classList.add('pointer-events-none'); // add this
+  localStorage.setItem(KEY_SUPPRESS_UNTIL, String(Date.now() + SUPPRESS_MS));
+};
+</script>

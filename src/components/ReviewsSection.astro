@@ -1,0 +1,120 @@
+---
+/**
+ * ReviewsSection.astro — loads approved reviews and injects AggregateRating JSON-LD.
+ * Option A (Astro API): FN_BASE is always "/api".
+ */
+const BRAND_NAME = 'Axis Cabs';
+const FN_BASE = '/api'; // server-computed and passed to client via data-attr
+---
+
+<section
+  id="reviews"
+  class="py-12 sm:py-16 bg-slate-50"
+  data-fn-base={FN_BASE}
+  data-brand={BRAND_NAME}
+>
+  <div class="mx-auto max-w-6xl px-4">
+    <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">What customers say</h2>
+    <p class="mt-1 text-slate-600">We only display verified, approved reviews.</p>
+
+    <div id="ac-reviews-grid" class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+    <div id="ac-reviews-actions" class="mt-6 flex justify-center">
+      <button id="ac-load-more"
+              class="rounded-xl border border-slate-300 px-4 py-2 hover:bg-white focus:outline-none focus:ring-2 focus:ring-slate-300">
+        Load more
+      </button>
+    </div>
+
+    <script id="ac-reviews-jsonld" type="application/ld+json"></script>
+  </div>
+</section>
+
+<script is:inline type="module">
+(() => {
+  const root = document.getElementById('reviews');
+  if (!root) return;
+
+  const FN_BASE = root.getAttribute('data-fn-base') || '/api';
+  const brandName = root.getAttribute('data-brand') || 'Axis Cabs';
+
+  const grid = document.getElementById('ac-reviews-grid');
+  const loadMoreBtn = document.getElementById('ac-load-more');
+  const jsonLdEl = document.getElementById('ac-reviews-jsonld');
+
+  let page = 1;
+  const PAGE_SIZE = 6;
+  let hasMore = true;
+  let aggregate = { count: 0, average: 0 };
+
+  function star(filled) { return filled ? '★' : '☆'; }
+
+  function renderCard(item) {
+    const rating = Number(item.rating) || 0;
+    const stars = Array.from({ length: 5 }, (_, i) => star(i < rating)).join(' ');
+    const meta = [item.name || 'Anonymous', item.city || ''].filter(Boolean).join(' • ');
+    const date = new Date(item.created_at).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
+    const bodyText = item.comment ?? item.review_text ?? '';
+
+    const el = document.createElement('article');
+    el.className = 'rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5';
+    el.setAttribute('itemScope', '');
+    el.setAttribute('itemType', 'https://schema.org/Review');
+    el.innerHTML = `
+      <div class="text-amber-500 text-lg" aria-label="${rating} out of 5 stars">${stars}</div>
+      <p class="mt-2 text-slate-800" itemprop="reviewBody"></p>
+      <div class="mt-3 text-sm text-slate-600 flex items-center justify-between">
+        <span itemprop="author" itemScope itemType="https://schema.org/Person">
+          <span itemprop="name">${meta || 'Customer'}</span>
+        </span>
+        <time itemprop="datePublished" datetime="${item.created_at}">${date}</time>
+      </div>
+      <meta itemprop="reviewRating" content="${rating}" />
+      <meta itemprop="itemReviewed" content="${brandName}" />
+    `;
+    el.querySelector('[itemprop="reviewBody"]').textContent = bodyText;
+    return el;
+  }
+
+  function updateJsonLd() {
+    const data = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": brandName,
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": aggregate.average || 0,
+        "reviewCount": aggregate.count || 0
+      }
+    };
+    jsonLdEl.textContent = JSON.stringify(data);
+  }
+
+  async function safeJson(res) {
+    const text = await res.text();
+    try { return JSON.parse(text); } catch { return { ok:false, error: text.slice(0,200) }; }
+  }
+
+  async function load() {
+    if (!hasMore) return;
+    loadMoreBtn.disabled = true;
+
+    const res = await fetch(`${FN_BASE}/reviews-list?page=${page}&pageSize=${encodeURIComponent(PAGE_SIZE)}`);
+    const data = await safeJson(res);
+    if (!res.ok || !data?.ok) {
+      loadMoreBtn.textContent = 'Failed to load';
+      return;
+    }
+    aggregate = data.aggregate || aggregate;
+    (data.items || []).forEach(item => grid.appendChild(renderCard(item)));
+    hasMore = !!data.hasMore;
+    if (!hasMore) document.getElementById('ac-reviews-actions')?.classList.add('hidden');
+    updateJsonLd();
+    page += 1;
+    loadMoreBtn.disabled = false;
+  }
+
+  loadMoreBtn?.addEventListener('click', load);
+  load();
+})();
+</script>

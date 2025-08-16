@@ -1,4 +1,6 @@
 ---
+import ReviewNudge from '@/components/ReviewNudge.astro';
+
 /** Base layout: canonical + GA + sensible defaults */
 export interface Props {
   title?: string;
@@ -19,6 +21,9 @@ const canonical = canonicalProp || computed.href;
 const metaTitle = title ?? 'Axis Cabs — Outstation & City Rides';
 const metaDesc  = description ?? 'Reliable cabs for city & outstation trips. Clean cars, pro drivers, fair pricing.';
 const metaImg   = ogImage ?? `${SITE.origin}/og-default.jpg`;
+
+// ✅ Inject GA ID at build-time instead of using import.meta in a runtime script
+const GA_ID = import.meta.env.PUBLIC_GA4_ID || '';
 ---
 
 <html lang="en">
@@ -37,17 +42,15 @@ const metaImg   = ogImage ?? `${SITE.origin}/og-default.jpg`;
     <meta property="og:image" content={metaImg} />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <!-- Favicons (adjust paths if needed) -->
+    <!-- Favicons -->
     <link rel="icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-    <!-- GA (single place) -->
-    <!-- If you already have an <Analytics /> component, import and render it here -->
+    <!-- GA (build-time injected ID, no import.meta at runtime) -->
     <script is:inline>
-      // guard: only load GA if PUBLIC_GA4_ID exists
       (function(){
-        const id = import.meta.env.PUBLIC_GA4_ID;
+        const id = {JSON.stringify(GA_ID)};
         if(!id) return;
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);} window.gtag = gtag;
@@ -58,10 +61,12 @@ const metaImg   = ogImage ?? `${SITE.origin}/og-default.jpg`;
       })();
     </script>
 
-    <!-- place for page-specific extra head tags -->
     <slot name="head" />
   </head>
   <body class="min-h-screen antialiased">
     <slot />
+
+    <!-- ✅ Mount the nudge ONCE here. Do NOT mount in index.astro too. -->
+    <ReviewNudge />
   </body>
 </html>

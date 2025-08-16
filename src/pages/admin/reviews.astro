@@ -1,0 +1,133 @@
+---
+/**
+ * /admin/reviews — simple moderation UI
+ * Protected by ADMIN_TOKEN sent in header `x-admin-token`.
+ */
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Review Moderation • Axis Cabs</title>
+    <link rel="icon" href="/favicon.svg">
+    <link rel="stylesheet" href="/styles/globals.css">
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <main class="mx-auto max-w-4xl p-4">
+      <h1 class="text-2xl font-bold">Review Moderation</h1>
+      <p class="text-slate-600">Approve, reject, or delete reviews.</p>
+
+      <div class="mt-4 flex items-center gap-2">
+        <input id="adm-token" type="password" placeholder="Enter admin token"
+               class="w-full rounded-xl border border-slate-300 px-3 py-2">
+        <button id="adm-save" class="rounded-xl bg-slate-900 text-white px-4 py-2">Save</button>
+      </div>
+
+      <div class="mt-4">
+        <label class="text-sm">Filter:</label>
+        <select id="adm-status" class="rounded-xl border border-slate-300 px-2 py-2">
+          <option value="pending" selected>Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <button id="adm-refresh" class="ml-2 rounded-xl border border-slate-300 px-3 py-2">Refresh</button>
+      </div>
+
+      <div id="adm-list" class="mt-4 grid gap-3"></div>
+    </main>
+
+    <script is:inline type="module">
+    (() => {
+      const list = document.getElementById('adm-list');
+      const statusSel = document.getElementById('adm-status');
+      const tokenInput = document.getElementById('adm-token');
+      const saveBtn = document.getElementById('adm-save');
+      const refreshBtn = document.getElementById('adm-refresh');
+      const KEY = 'ac_admin_token';
+      const ERR = (msg) => { list.innerHTML = `<div class="text-rose-600">${msg}</div>`; };
+
+      tokenInput.value = localStorage.getItem(KEY) || '';
+
+  saveBtn.addEventListener('click', () => {
+    localStorage.setItem(KEY, tokenInput.value.trim());
+    alert('Saved token');
+    fetchList();            // auto-load after saving
+  });
+
+  // convenience: press Enter in the token field to save + fetch
+  tokenInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveBtn.click();
+    }
+  });
+
+      async function fetchList() {
+        list.innerHTML = 'Loading...';
+        const token = localStorage.getItem(KEY) || tokenInput.value.trim();
+        if (!token) { list.innerHTML = 'Enter token first.'; return; }
+        const res = await fetch(`/api/reviews-admin?status=${encodeURIComponent(statusSel.value)}`, {
+          headers: { 'x-admin-token': token }
+        });
+        const data = await res.json();
+if (!res.ok) return ERR(res.status === 401 ? 'Bad or missing token.' : 'Server error.');
+  if (!data?.ok) return ERR(data?.error || 'Error.');
+        list.innerHTML = '';
+        data.items.forEach((item) => {
+          const div = document.createElement('div');
+          const meta = [item.name || 'Anonymous', item.city || ''].filter(Boolean).join(' • ');
+          div.className = 'rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5';
+          const bodyText = item.comment ?? item.review_text ?? '';
+          div.innerHTML = `
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-amber-500">${'★'.repeat(item.rating)}${'☆'.repeat(5-item.rating)}</div>
+                <p class="mt-1"></p>
+                <p class="mt-2 text-sm text-slate-600">${meta}</p>
+                <p class="text-xs text-slate-500">${new Date(item.created_at).toLocaleString()}</p>
+              </div>
+              <div class="flex flex-col gap-2">
+                <button data-act="approve" data-id="${item.id}" class="rounded-lg bg-emerald-600 text-white px-3 py-1">Approve</button>
+                <button data-act="reject" data-id="${item.id}" class="rounded-lg bg-amber-600 text-white px-3 py-1">Reject</button>
+                <button data-act="delete" data-id="${item.id}" class="rounded-lg bg-rose-600 text-white px-3 py-1">Delete</button>
+              </div>
+            </div>
+          `;
+          div.querySelector('p.mt-1').textContent = bodyText;
+          list.appendChild(div);
+        });
+      }
+
+      list.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-act]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.act;
+        const token = localStorage.getItem(KEY) || tokenInput.value.trim();
+        if (!token) return alert('Enter token first');
+        if (action === 'delete' && !confirm('Delete permanently?')) return;
+
+   btn.disabled = true;
+   const res = await fetch('/api/reviews-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type':'application/json',
+            'x-admin-token': token
+          },
+          body: JSON.stringify({ action, id })
+        });
+        const data = await res.json();
+btn.disabled = false;
+   if (!res.ok || !data?.ok) return alert(data?.error || 'Action failed');
+   fetchList();
+  });
+
+      refreshBtn.addEventListener('click', fetchList);
+       statusSel.addEventListener('change', fetchList);
+      fetchList();
+    })();
+    </script>
+  </body>
+</html>
