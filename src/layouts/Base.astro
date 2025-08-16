@@ -1,28 +1,25 @@
 ---
 import ReviewNudge from '@/components/ReviewNudge.astro';
 
-/** Base layout: canonical + GA + sensible defaults */
 export interface Props {
   title?: string;
   description?: string;
-  canonical?: string;   // optional manual override
+  canonical?: string;
   ogImage?: string;
 }
 const { title, description, canonical: canonicalProp, ogImage } = Astro.props;
 
-// Build canonical from the live request URL (SSR) or Astro.site fallback
 const SITE = (Astro.site ?? new URL('https://axiscabs.com'));
 const path = Astro.url?.pathname ?? '/';
 const computed = new URL(path, SITE);
 if (path !== '/' && computed.pathname.endsWith('/')) computed.pathname = computed.pathname.slice(0, -1);
 const canonical = canonicalProp || computed.href;
 
-// Meta defaults (override per page via props)
 const metaTitle = title ?? 'Axis Cabs — Outstation & City Rides';
 const metaDesc  = description ?? 'Reliable cabs for city & outstation trips. Clean cars, pro drivers, fair pricing.';
 const metaImg   = ogImage ?? `${SITE.origin}/og-default.jpg`;
 
-// ✅ Inject GA ID at build-time instead of using import.meta in a runtime script
+// Read GA at build time; we’ll pass it to the browser via a meta tag
 const GA_ID = import.meta.env.PUBLIC_GA4_ID || '';
 ---
 
@@ -47,26 +44,32 @@ const GA_ID = import.meta.env.PUBLIC_GA4_ID || '';
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-    <!-- GA (build-time injected ID, no import.meta at runtime) -->
-    <script is:inline>
-      (function(){
-        const id = {JSON.stringify(GA_ID)};
-        if(!id) return;
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);} window.gtag = gtag;
-        gtag('js', new Date()); gtag('config', id);
-        var s=document.createElement('script');
-        s.async=1; s.src='https://www.googletagmanager.com/gtag/js?id='+id;
-        document.head.appendChild(s);
-      })();
-    </script>
-
+    <!-- Robots for admin pages can be set on those pages; base stays indexable -->
     <slot name="head" />
+
+    <!-- ✅ Pass GA ID safely via meta to avoid inline script templating issues -->
+    {GA_ID && <meta name="ga-id" content={GA_ID} />}
   </head>
   <body class="min-h-screen antialiased">
     <slot />
 
-    <!-- ✅ Mount the nudge ONCE here. Do NOT mount in index.astro too. -->
+    <!-- ✅ GA boot script (reads ID from meta tag, no { ... } inside JS) -->
+    <script is:inline>
+      (function(){
+        var m = document.querySelector('meta[name="ga-id"]');
+        var id = m ? m.content : '';
+        if(!id) return;
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ dataLayer.push(arguments); } window.gtag = gtag;
+        gtag('js', new Date()); gtag('config', id);
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id;
+        document.head.appendChild(s);
+      })();
+    </script>
+
+    <!-- ✅ Nudge mounted once site-wide -->
     <ReviewNudge />
   </body>
 </html>

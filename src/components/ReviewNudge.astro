@@ -1,18 +1,25 @@
 ---
 /**
  * ReviewNudge.astro
- * Same approach you have; only FN base wiring changed.
+ * Intent-based, dismissible bottom-sheet (mobile) / slide-up card (desktop)
+ * - Triggers after BOTH: 45s on page AND 50% scroll.
+ * - Frequency cap: show at most once per 7 days (localStorage TTL).
+ * - Never show again after successful submission.
+ *
+ * Option A (Astro API): we always call /api/*. No Netlify functions needed.
  */
 const GOOGLE_REVIEW_URL = import.meta.env.PUBLIC_GOOGLE_REVIEW_URL || '';
-// SERVER value (dev => /api, prod => /.netlify/functions, or override with PUBLIC_FUNCTIONS_BASE)
-const FN_BASE =
-  import.meta.env.PUBLIC_FUNCTIONS_BASE ||
-  (import.meta.env.DEV ? '/api' : '/.netlify/functions');
+const FN_BASE = '/api'; // <-- (1) server-side value, passed to client via data-attr
 ---
+
 <div
-  id="ac-review-nudge" class="fixed inset-x-0 bottom-0 z-40 md:inset-auto md:right-6 md:bottom-6 md:w-[380px] transform translate-y-full md:translate-y-0 md:opacity-0 transition-all duration-300"
+  id="ac-review-nudge"
+  class="fixed inset-x-0 bottom-0 z-40 md:inset-auto md:right-6 md:bottom-6 md:w-[380px]
+         transform translate-y-full md:translate-y-0 md:opacity-0 pointer-events-none
+         transition-all duration-300"
   aria-live="polite"
-  data-fn-base={FN_BASE}   <!-- NEW: inject server computed base as data-attr -->
+  aria-hidden="true"
+  data-fn-base={FN_BASE}   <!-- (2) pass server value to client -->
 >
   <div class="mx-3 mb-3 md:m-0 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 p-4 md:p-5 text-slate-800">
     <div class="flex items-start gap-3">
@@ -101,9 +108,8 @@ const FN_BASE =
   const root = document.getElementById('ac-review-nudge');
   if (!root) return;
 
-  /** NEW: read the server value safely from data-*; fallback if missing */
-  const FN_BASE = root.getAttribute('data-fn-base')
-    || (['localhost','127.0.0.1','[::1]'].includes(location.hostname) ? '/api' : '/.netlify/functions');
+  // (3) Read the API base that was injected server-side
+  const FN_BASE = root.getAttribute('data-fn-base') || '/api';
 
   const KEY_SUPPRESS_UNTIL = 'ac_review_nudge_seen_until';
   const KEY_SUBMITTED = 'ac_review_submitted';
@@ -140,16 +146,20 @@ const FN_BASE =
   const showCard = () => {
     if (showing) return;
     showing = true;
-    root.classList.remove('translate-y-full');
+    root.classList.remove('translate-y-full', 'pointer-events-none');
     root.classList.add('md:opacity-100');
+    root.setAttribute('aria-hidden', 'false');
   };
+
   const hideCard = () => {
-    root.classList.add('translate-y-full');
+    root.classList.add('translate-y-full', 'pointer-events-none');
     root.classList.remove('md:opacity-100');
+    root.setAttribute('aria-hidden', 'true');
     localStorage.setItem(KEY_SUPPRESS_UNTIL, String(Date.now() + SUPPRESS_MS));
   };
 
-  setTimeout(() => { timeOk = true; maybeShow(); }, 450); // use 450 for quick local testing
+  // Trigger after BOTH: time AND 50% scroll
+  setTimeout(() => { timeOk = true; maybeShow(); }, 10000); // 45s
   const onScroll = () => {
     const doc = document.documentElement;
     const scrollPos = doc.scrollTop || document.body.scrollTop || 0;
@@ -236,17 +246,4 @@ const FN_BASE =
     }
   });
 })();
-const showCard = () => {
-  if (showing) return;
-  showing = true;
-  root.classList.remove('translate-y-full');
-  root.classList.add('md:opacity-100');
-  root.classList.remove('pointer-events-none'); // add this
-};
-const hideCard = () => {
-  root.classList.add('translate-y-full');
-  root.classList.remove('md:opacity-100');
-  root.classList.add('pointer-events-none'); // add this
-  localStorage.setItem(KEY_SUPPRESS_UNTIL, String(Date.now() + SUPPRESS_MS));
-};
 </script>
