@@ -11,6 +11,13 @@
  * - GA4 custom events: `lead_submit`, `whatsapp_click` (+ *_error)
  * - Attribution: captures UTM params + `page` (pathname) into Supabase
  *
+ * UX/Validation Hardening
+ * - Date: cannot select past; defaults to today
+ * - Time: defaults to 07:00 if early, else “now + 2h” (rounded to 15m)
+ * - WhatsApp number (user): digits only, exactly 10 (India)
+ * - Passengers/Bags: digits only, min/max applied
+ * - Name: alphabets & spaces only
+ *
  * Required public env (Netlify site):
  * - PUBLIC_SUPABASE_URL
  * - PUBLIC_SUPABASE_ANON_KEY
@@ -23,17 +30,33 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
 ---
 
-<form id="lead-form" class="card">
+<form id="lead-form" class="card" data-wa-num={WA_NUM} novalidate={false}>
   <div class="grid md:grid-cols-2 gap-4">
     <!-- Core fields -->
     <input required name="from_city"  placeholder="From City"               class="border rounded-xl px-4 py-3" />
     <input required name="to_city"    placeholder="To City"                 class="border rounded-xl px-4 py-3" />
+
+    <!-- Date: defaults to today; min=today -->
     <input required name="date"  type="date"                                class="border rounded-xl px-4 py-3" />
-    <input required name="time"  type="time"                                class="border rounded-xl px-4 py-3" />
-    <input required name="pax"   type="number" min="1" max="12" placeholder="Passengers" class="border rounded-xl px-4 py-3" />
-    <input           name="bags"  type="number" min="0" max="12" placeholder="Bags"       class="border rounded-xl px-4 py-3" />
+
+    <!-- Time: defaults to 07:00 if early, else now+2h (rounded to 15m) -->
+    <input required name="time"  type="time" step="900"                     class="border rounded-xl px-4 py-3" />
+
+    <!-- Passengers: digits only, 1..12 -->
+    <input required name="pax"   inputmode="numeric" type="text" minlength="1" maxlength="2"
+           placeholder="Passengers" class="border rounded-xl px-4 py-3" />
+
+    <!-- Bags: digits only, 0..12 (optional) -->
+    <input           name="bags" inputmode="numeric" type="text" minlength="1" maxlength="2"
+           placeholder="Bags"       class="border rounded-xl px-4 py-3" />
+
+    <!-- Name: alphabets & spaces only -->
     <input required name="name"        placeholder="Your Name"              class="border rounded-xl px-4 py-3" />
-    <input required name="whatsapp"    placeholder="WhatsApp (+91...)"      class="border rounded-xl px-4 py-3" />
+
+    <!-- WhatsApp (user): India 10-digit, digits only -->
+    <input required name="whatsapp"    placeholder="WhatsApp (10-digit)"    class="border rounded-xl px-4 py-3"
+           inputmode="numeric" type="tel" maxlength="10" pattern="[0-9]{10}" autocomplete="tel" />
+
     <textarea name="notes" placeholder="Notes (optional)" class="md:col-span-2 border rounded-xl px-4 py-3"></textarea>
 
     <!-- Honeypot (hidden to humans; bots often fill everything) -->
@@ -62,26 +85,34 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
     {!ENV_OK && '⚠️ Missing Supabase env vars. Add PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY on Netlify, then redeploy.'}
   </p>
 
-  <!-- Hoisted so Vite resolves '@/...' and bundles the imports once -->
   <script hoist>
     import { getSupabaseClient } from '@/lib/SupabaseClient';
     import { gaEvent } from '@/lib/ga';
 
     (function initAxisLeadForm() {
-      // Single Supabase client (anon). RLS should handle security.
       const db = getSupabaseClient();
 
-      // Cache nodes
       const formEl    = document.getElementById('lead-form');
-      if (!formEl) return; // defensive
+      if (!formEl) return;
 
       const btnWa     = formEl.querySelector('#btn-wa');
       const btnSubmit = formEl.querySelector('#btn-submit');
       const msg       = formEl.querySelector('#msg');
 
-      // ---- helpers ----------------------------------------------------------
+      const fields = {
+        from: formEl.querySelector('[name="from_city"]'),
+        to: formEl.querySelector('[name="to_city"]'),
+        date: formEl.querySelector('[name="date"]'),
+        time: formEl.querySelector('[name="time"]'),
+        pax: formEl.querySelector('[name="pax"]'),
+        bags: formEl.querySelector('[name="bags"]'),
+        name: formEl.querySelector('[name="name"]'),
+        wa: formEl.querySelector('[name="whatsapp"]'),
+        notes: formEl.querySelector('[name="notes"]'),
+      };
 
-      const pagePath = () => location.pathname; // persisted with the lead
+      const pagePath = () => location.pathname;
+      const BUSINESS_WA = String(formEl.getAttribute('data-wa-num') || '').replace(/\D/g, '');
 
       function setMsg(text, isError = false) {
         msg.textContent = text || '';
@@ -90,48 +121,169 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
       }
 
       function setBusy(on) {
-        for (const el of [btnWa, btnSubmit]) {
+        [btnWa, btnSubmit].forEach((el) => {
           el.disabled = on;
           el.classList.toggle('opacity-60', on);
           el.classList.toggle('cursor-not-allowed', on);
-        }
+        });
       }
 
       function resetForm() {
         formEl.reset();
+        applyDateDefaults();
+        applyTimeDefaults();
       }
 
-      // prefill UTM hidden inputs from URL on load
+      function digitsOnly(s) { return String(s || '').replace(/\D/g, ''); }
+      function clampInt(n, min, max) {
+        const v = Number.parseInt(n, 10);
+        if (Number.isNaN(v)) return null;
+        return Math.min(Math.max(v, min), max);
+      }
+
+      function todayStr() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
       (function hydrateUtms() {
         const params = new URLSearchParams(location.search);
-        const keys = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
-        for (const k of keys) {
+        ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'].forEach((k) => {
           const el = formEl.querySelector(`[name="${k}"]`);
-          if (el && params.get(k)) el.value = params.get(k);
-        }
+          const val = params.get(k);
+          if (el && val) el.value = val;
+        });
       })();
 
-      // Insert into Supabase or throw a friendly error
+      // ----- Defaults & Validation
+
+      function applyDateDefaults() {
+        const el = fields.date;
+        if (!el) return;
+        const t = todayStr();
+        el.min = t;
+        if (!el.value) el.value = t;
+        const fix = () => { if (el.value && el.value < t) el.value = t; };
+        el.addEventListener('change', fix);
+        el.addEventListener('blur', fix);
+      }
+
+      function applyTimeDefaults() {
+        const el = fields.time;
+        if (!el || el.value) return;
+        const now = new Date();
+        let h = now.getHours();
+        let m = now.getMinutes();
+        if (h < 5) { h = 7; m = 0; }
+        else {
+          const rounded = Math.ceil(m / 15) * 15;
+          if (rounded === 60) { h += 1; m = 0; } else { m = rounded; }
+          h = Math.min(h + 2, 23);
+        }
+        el.value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+
+      function wireNameValidation() {
+        const el = fields.name;
+        if (!el) return;
+        const validate = () => {
+          const cleaned = (el.value || '').replace(/[^A-Za-z\s]/g, '');
+          if (cleaned !== el.value) el.value = cleaned;
+          const ok = /^([A-Za-z]+(\s[A-Za-z]+)*)$/.test(el.value.trim());
+          el.setCustomValidity(ok ? '' : 'Please use alphabets and spaces only.');
+        };
+        el.addEventListener('input', validate);
+        el.addEventListener('blur', validate);
+      }
+
+      function wireWhatsAppValidation() {
+        const el = fields.wa;
+        if (!el) return;
+        const handle = () => {
+          const cleaned = digitsOnly(el.value).slice(0, 10).trim();
+          if (cleaned !== el.value) el.value = cleaned;
+          const ok = /^[0-9]{10}$/.test(el.value);
+          el.setCustomValidity(ok ? '' : 'Enter a valid 10-digit WhatsApp number.');
+        };
+        el.addEventListener('input', handle);
+        el.addEventListener('blur', handle);
+      }
+
+      function wirePaxValidation() {
+        const el = fields.pax;
+        if (!el) return;
+        const handle = () => {
+          const digits = digitsOnly(el.value);
+          const clamped = digits ? clampInt(digits, 1, 12) : null;
+          el.value = clamped === null ? '' : String(clamped);
+          const n = Number.parseInt(el.value, 10);
+          el.setCustomValidity(Number.isInteger(n) && n >= 1 && n <= 12 ? '' : 'Passengers must be between 1 and 12.');
+        };
+        el.addEventListener('input', handle);
+        el.addEventListener('blur', handle);
+      }
+
+      function wireBagsValidation() {
+        const el = fields.bags;
+        if (!el) return;
+        const handle = () => {
+          const digits = digitsOnly(el.value);
+          const clamped = digits === '' ? 0 : clampInt(digits, 0, 12);
+          el.value = clamped === null ? '' : String(clamped);
+          const n = Number.parseInt(el.value, 10);
+          el.setCustomValidity(Number.isInteger(n) && n >= 0 && n <= 12 ? '' : 'Bags must be between 0 and 12.');
+        };
+        el.addEventListener('input', handle);
+        el.addEventListener('blur', handle);
+      }
+
+      applyDateDefaults();
+      applyTimeDefaults();
+      wireNameValidation();
+      wireWhatsAppValidation();
+      wirePaxValidation();
+      wireBagsValidation();
+
+      // ----- DB insert
+
       async function insertLeadOrThrow() {
-        // Enforce HTML5 required fields first
+        // Trigger native validation (uses pattern="[0-9]{10}" on WhatsApp)
         if (!formEl.reportValidity()) {
-          throw new Error('Please fill all required fields.');
+          throw new Error('Please fill all required fields (see highlights).');
+        }
+
+        // Ensure date >= today
+        const t = todayStr();
+        if (fields.date && fields.date.value < t) {
+          fields.date.value = t;
+          throw new Error('Pickup date cannot be in the past.');
         }
 
         const fd = new FormData(formEl);
         const payload = Object.fromEntries(fd.entries());
 
-        // Honeypot: if 'website' filled, treat as success but skip DB insert
+        // Sanitize
+        payload.name      = (payload.name || '').replace(/[^A-Za-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        payload.whatsapp  = digitsOnly(payload.whatsapp || '');
+        payload.pax       = String(clampInt(digitsOnly(payload.pax || '1'), 1, 12) ?? '1');
+        payload.bags      = String(clampInt(digitsOnly(payload.bags || '0'), 0, 12) ?? '0');
+
+        // Honeypot
         if (payload.website) return payload;
 
-        // Required fields (extra guardrails)
         const req = ['from_city','to_city','date','time','pax','name','whatsapp'];
         for (const k of req) if (!payload[k]) throw new Error(`Missing ${k}`);
 
-        // Build row for Supabase
+        if (!/^[0-9]{10}$/.test(payload.whatsapp)) {
+          throw new Error('Enter a valid 10-digit WhatsApp number.');
+        }
+
         const row = {
           source: 'web',
-          page: pagePath(), // 👈 capture current pathname
+          page: pagePath(),
           from_city: payload.from_city,
           to_city:   payload.to_city,
           date:      payload.date,
@@ -157,22 +309,19 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
         return payload;
       }
 
-      // ---- events -----------------------------------------------------------
+      // ----- Events
 
-      // WhatsApp CTA: save lead then open WA with prefilled message
       btnWa.addEventListener('click', async () => {
         setMsg(''); setBusy(true);
         try {
           const lead = await insertLeadOrThrow();
 
-          // GA: whatsapp_click
           gaEvent('whatsapp_click', {
             page: pagePath(),
             from_city: lead.from_city || '',
             to_city:   lead.to_city   || '',
           });
 
-          // Build WA message
           const t =
             `Ride request:%0AFrom: ${encodeURIComponent(lead.from_city)}` +
             `%0ATo: ${encodeURIComponent(lead.to_city)}` +
@@ -181,10 +330,12 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
             `%0ANotes: ${encodeURIComponent(lead.notes || '')}`;
 
           resetForm();
-          // ✅ correct variable interpolation for WA number:
-          window.location.href = `https://wa.me/${'${WA_NUM}'}`.replace('${WA_NUM}', '${WA_NUM}') + `?text=${t}`;
-          // (Astro frontmatter variables are not available inside hoisted script templates,
-          //  so we keep the number inside the HTML and pass it via data attribute too, if needed.)
+
+          if (BUSINESS_WA) {
+            window.location.href = `https://wa.me/${BUSINESS_WA}?text=${t}`;
+          } else {
+            setMsg('WhatsApp number not configured. Please call us or submit the form.', true);
+          }
         } catch (e) {
           setMsg(e?.message || 'Network error. Try again.', true);
           gaEvent('whatsapp_click_error', { page: pagePath() });
@@ -193,15 +344,11 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
         }
       });
 
-      // Submit CTA: save lead and confirm inline
       btnSubmit.addEventListener('click', async () => {
         setMsg(''); setBusy(true);
         try {
           await insertLeadOrThrow();
-
-          // GA: lead_submit
           gaEvent('lead_submit', { page: pagePath() });
-
           setMsg('Thanks! Our team will contact you shortly.');
           resetForm();
         } catch (e) {
