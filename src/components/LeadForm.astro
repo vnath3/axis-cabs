@@ -30,8 +30,9 @@ const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
 ---
 
-<form id="lead-form" class="card" data-wa-num={WA_NUM} novalidate={false}>
-  <div class="grid md:grid-cols-2 gap-4">
+<form id="lead-form" class="card p-4 md:p-6" data-wa-num={WA_NUM} novalidate={false}>
+  <!-- CHANGED: was `grid md:grid-cols-2` → now single-column until xl -->
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
     <!-- Core fields -->
     <input required name="from_city"  placeholder="From City"               class="border rounded-xl px-4 py-3" />
     <input required name="to_city"    placeholder="To City"                 class="border rounded-xl px-4 py-3" />
@@ -57,7 +58,7 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
     <input required name="whatsapp"    placeholder="WhatsApp (10-digit)"    class="border rounded-xl px-4 py-3"
            inputmode="numeric" type="tel" maxlength="10" pattern="[0-9]{10}" autocomplete="tel" />
 
-    <textarea name="notes" placeholder="Notes (optional)" class="md:col-span-2 border rounded-xl px-4 py-3"></textarea>
+    <textarea name="notes" placeholder="Notes (optional)" class="xl:col-span-2 border rounded-xl px-4 py-3"></textarea>
 
     <!-- Honeypot (hidden to humans; bots often fill everything) -->
     <input name="website" tabindex="-1" autocomplete="off" class="hidden" />
@@ -70,12 +71,12 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
     <input type="hidden" name="utm_content" />
   </div>
 
-  <div class="mt-4 flex gap-3">
+  <div class="mt-4 flex flex-col sm:flex-row gap-3">
     <!-- Important: type="button" so native submit doesn't fire -->
-    <button type="button" class="btn-primary" id="btn-wa" aria-live="polite">
+    <button type="button" class="btn-primary w-full sm:w-auto" id="btn-wa" aria-live="polite">
       Get Instant Quote on WhatsApp
     </button>
-    <button type="button" class="inline-flex items-center px-5 py-3 rounded-xl border border-primary font-semibold" id="btn-submit" aria-live="polite">
+    <button type="button" class="inline-flex items-center px-5 py-3 rounded-xl border border-primary font-semibold w-full sm:w-auto" id="btn-submit" aria-live="polite">
       Submit
     </button>
   </div>
@@ -85,6 +86,7 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
     {!ENV_OK && '⚠️ Missing Supabase env vars. Add PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY on Netlify, then redeploy.'}
   </p>
 
+  <!-- Hoisted script (unchanged logic) -->
   <script hoist>
     import { getSupabaseClient } from '@/lib/SupabaseClient';
     import { gaEvent } from '@/lib/ga';
@@ -158,7 +160,7 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
         });
       })();
 
-      // ----- Defaults & Validation
+      // Defaults & Validation
 
       function applyDateDefaults() {
         const el = fields.date;
@@ -247,15 +249,13 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
       wirePaxValidation();
       wireBagsValidation();
 
-      // ----- DB insert
+      // DB insert
 
       async function insertLeadOrThrow() {
-        // Trigger native validation (uses pattern="[0-9]{10}" on WhatsApp)
         if (!formEl.reportValidity()) {
           throw new Error('Please fill all required fields (see highlights).');
         }
 
-        // Ensure date >= today
         const t = todayStr();
         if (fields.date && fields.date.value < t) {
           fields.date.value = t;
@@ -271,7 +271,6 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
         payload.pax       = String(clampInt(digitsOnly(payload.pax || '1'), 1, 12) ?? '1');
         payload.bags      = String(clampInt(digitsOnly(payload.bags || '0'), 0, 12) ?? '0');
 
-        // Honeypot
         if (payload.website) return payload;
 
         const req = ['from_city','to_city','date','time','pax','name','whatsapp'];
@@ -309,7 +308,7 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
         return payload;
       }
 
-      // ----- Events
+      // Events
 
       btnWa.addEventListener('click', async () => {
         setMsg(''); setBusy(true);
@@ -331,8 +330,9 @@ const ENV_OK = Boolean(SUPA_URL && SUPA_KEY);
 
           resetForm();
 
-          if (BUSINESS_WA) {
-            window.location.href = `https://wa.me/${BUSINESS_WA}?text=${t}`;
+          const wa = BUSINESS_WA;
+          if (wa) {
+            window.location.href = `https://wa.me/${wa}?text=${t}`;
           } else {
             setMsg('WhatsApp number not configured. Please call us or submit the form.', true);
           }

@@ -27,17 +27,24 @@ if (!entry) return Astro.redirect('/');
   <body>
     <Header />
     <Hero title={entry.title} sub={entry.summary} />
-    <main class="mx-auto max-w-6xl px-4 grid md:grid-cols-3 gap-8">
-      <div class="md:col-span-2 space-y-4">
+
+    <!-- Stack on small/medium; at lg use fixed 380px sidebar to prevent squeeze -->
+    <main class="mx-auto max-w-6xl px-4 grid gap-8 items-start lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div class="space-y-4">
         {entry.bestTime && <div class="card"><strong>Best Time</strong><p class="text-sm mt-2">{entry.bestTime}</p></div>}
         {entry.howToReach && <div class="card"><strong>How to Reach</strong><p class="text-sm mt-2">{entry.howToReach}</p></div>}
         {entry.content.map((p) => <div class="card text-sm opacity-90">{p}</div>)}
         <div class="card"><strong>Plan with Axis</strong><p class="text-sm mt-2">Bundle this with nearby routes for better pricing.</p></div>
       </div>
-      <aside>
-        <div class="card"><h3 class="font-semibold mb-2">Get a Cab</h3><LeadForm /></div>
+
+      <aside class="">
+        <div class="card p-4 md:p-6 sticky top-24">
+          <h3 class="font-semibold mb-3">Get a Cab</h3>
+          <LeadForm />
+        </div>
       </aside>
     </main>
+
     <Footer />
   </body>
 </html>
