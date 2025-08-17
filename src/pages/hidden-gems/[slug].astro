@@ -12,8 +12,33 @@ export async function getStaticPaths() {
 }
 
 const { slug } = Astro.params;
-const entry = gems.find(g => g.slug === slug);
+const entry = gems.find((g) => g.slug === slug);
 if (!entry) return Astro.redirect('/');
+
+/**
+ * Normalize entry.content so every card has a heading.
+ * - If content[i] is a string, auto-title:
+ *   - index 0 => "Highlights"
+ *   - index >=1 => "Tips"
+ * - If content[i] is { title, text }, keep as-is.
+ */
+function normalizeContent(content = []) {
+  return content.map((item, idx) => {
+    if (typeof item === 'string') {
+      return {
+        title: idx === 0 ? 'Highlights' : 'Tips',
+        text: item,
+      };
+    }
+    // ensure keys exist if object provided
+    return {
+      title: item?.title ?? (idx === 0 ? 'Highlights' : 'Tips'),
+      text: item?.text ?? '',
+    };
+  });
+}
+
+const blocks = normalizeContent(entry.content || []);
 ---
 <html lang="en">
   <head>
@@ -31,13 +56,35 @@ if (!entry) return Astro.redirect('/');
     <!-- Stack on small/medium; at lg use fixed 380px sidebar to prevent squeeze -->
     <main class="mx-auto max-w-6xl px-4 grid gap-8 items-start lg:grid-cols-[minmax(0,1fr)_380px]">
       <div class="space-y-4">
-        {entry.bestTime && <div class="card"><strong>Best Time</strong><p class="text-sm mt-2">{entry.bestTime}</p></div>}
-        {entry.howToReach && <div class="card"><strong>How to Reach</strong><p class="text-sm mt-2">{entry.howToReach}</p></div>}
-        {entry.content.map((p) => <div class="card text-sm opacity-90">{p}</div>)}
-        <div class="card"><strong>Plan with Axis</strong><p class="text-sm mt-2">Bundle this with nearby routes for better pricing.</p></div>
+        {entry.bestTime && (
+          <div class="card">
+            <strong class="block text-slate-900">Best Time</strong>
+            <p class="text-sm mt-2">{entry.bestTime}</p>
+          </div>
+        )}
+
+        {entry.howToReach && (
+          <div class="card">
+            <strong class="block text-slate-900">How to Reach</strong>
+            <p class="text-sm mt-2">{entry.howToReach}</p>
+          </div>
+        )}
+
+        {/* Normalized middle cards always have a heading now */}
+        {blocks.map((b) => (
+          <div class="card">
+            <strong class="block text-slate-900">{b.title}</strong>
+            <p class="text-sm mt-2 opacity-90">{b.text}</p>
+          </div>
+        ))}
+
+        <div class="card">
+          <strong class="block text-slate-900">Plan with Axis</strong>
+          <p class="text-sm mt-2">Bundle this with nearby routes for better pricing.</p>
+        </div>
       </div>
 
-      <aside class="">
+      <aside>
         <div class="card p-4 md:p-6 sticky top-24">
           <h3 class="font-semibold mb-3">Get a Cab</h3>
           <LeadForm />
