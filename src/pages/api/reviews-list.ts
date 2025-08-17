@@ -6,13 +6,17 @@ export const prerender = false;
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store'
+    }
   });
 }
 
 const SUPABASE_URL = import.meta.env.SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
 function sb() {
   const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
   if (!SUPABASE_URL || !key) return null;
@@ -57,20 +61,26 @@ export const GET: APIRoute = async ({ request }) => {
 
     if (error) return json({ ok: false, error: error.message }, 500);
 
-    // Aggregate average
+    // Aggregate average (kept simple; could be optimized with a view/RPC)
     const { data: ratings, error: avgErr } = await client
       .from('reviews')
       .select('rating')
       .eq('status', 'approved');
+
     if (avgErr) return json({ ok: false, error: avgErr.message }, 500);
 
     const total = ratings?.length || 0;
     const sum = (ratings || []).reduce((acc, r: any) => acc + (Number(r.rating) || 0), 0);
     const average = total ? Number((sum / total).toFixed(2)) : 0;
 
-    const hasMore = count != null ? to + 1 < count : (items?.length || 0) === pageSize;
+    const hasMore = count != null ? to + 1 < (count as number) : (items?.length || 0) === pageSize;
 
-    return json({ ok: true, items: items || [], hasMore, aggregate: { count: total, average } });
+    return json({
+      ok: true,
+      items: items || [],
+      hasMore,
+      aggregate: { count: total, average }
+    });
   } catch (err: any) {
     return json({ ok: false, error: err?.message || 'Server error' }, 500);
   }

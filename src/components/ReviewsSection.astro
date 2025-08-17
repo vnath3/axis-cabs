@@ -1,120 +1,219 @@
 ---
 /**
- * ReviewsSection.astro — loads approved reviews and injects AggregateRating JSON-LD.
- * Option A (Astro API): FN_BASE is always "/api".
+ * ReviewsSection.astro — Single-row, continuously moving reviews marquee
+ * Implementation: requestAnimationFrame loop (px/second), seamless loop via row duplication.
+ * - No dependency on CSS animation (so it will move even if reduced-motion is set)
+ * - Pauses on hover/touch
+ * - Fetches all pages from /api/reviews-list and concatenates
+ * - Injects AggregateRating JSON-LD
  */
 const BRAND_NAME = 'Axis Cabs';
-const FN_BASE = '/api'; // server-computed and passed to client via data-attr
+const FN_BASE = '/api';
+const SPEED_PX_PER_SEC = 60; // marquee speed (lower = slower)
 ---
-
 <section
   id="reviews"
   class="py-12 sm:py-16 bg-slate-50"
   data-fn-base={FN_BASE}
   data-brand={BRAND_NAME}
+  data-speed={String(SPEED_PX_PER_SEC)}
 >
   <div class="mx-auto max-w-6xl px-4">
     <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">What customers say</h2>
     <p class="mt-1 text-slate-600">We only display verified, approved reviews.</p>
 
-    <div id="ac-reviews-grid" class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    <!-- Marquee wrapper -->
+    <div id="ac-marquee-wrap" class="relative mt-6 overflow-hidden">
+      <!-- fading edges -->
+      <div class="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-slate-50 to-transparent"></div>
+      <div class="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-50 to-transparent"></div>
 
-    <div id="ac-reviews-actions" class="mt-6 flex justify-center">
-      <button id="ac-load-more"
-              class="rounded-xl border border-slate-300 px-4 py-2 hover:bg-white focus:outline-none focus:ring-2 focus:ring-slate-300">
-        Load more
-      </button>
+      <!-- Runner will be translated by JS -->
+      <div id="ac-marquee-runner" class="flex gap-4 will-change-transform"></div>
     </div>
 
     <script id="ac-reviews-jsonld" type="application/ld+json"></script>
   </div>
 </section>
 
+<style is:global>
+  .ac-review-card {
+    width: 20rem; min-width: 20rem; /* readable card width */
+    border-radius: 1rem;              /* rounded-2xl */
+    background: #fff;
+    padding: 1.5rem;                  /* p-6 */
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    outline: 1px solid rgb(0 0 0 / 0.05); /* ring-1 ring-black/5 */
+  }
+  @media (min-width: 640px) { .ac-review-card { width: 22rem; min-width: 22rem; } }
+  @media (min-width: 1024px){ .ac-review-card { width: 24rem; min-width: 24rem; } }
+  .ac-review-card * { word-break: break-word; }
+</style>
+
 <script is:inline type="module">
 (() => {
-  const root = document.getElementById('reviews');
+  const root   = document.getElementById('reviews');
   if (!root) return;
 
   const FN_BASE = root.getAttribute('data-fn-base') || '/api';
-  const brandName = root.getAttribute('data-brand') || 'Axis Cabs';
+  const brand   = root.getAttribute('data-brand')    || 'Axis Cabs';
+  const SPEED   = Number(root.getAttribute('data-speed')) || 60; // px/sec
 
-  const grid = document.getElementById('ac-reviews-grid');
-  const loadMoreBtn = document.getElementById('ac-load-more');
+  const wrap   = document.getElementById('ac-marquee-wrap');
+  const runner = document.getElementById('ac-marquee-runner');
   const jsonLdEl = document.getElementById('ac-reviews-jsonld');
 
-  let page = 1;
-  const PAGE_SIZE = 6;
-  let hasMore = true;
   let aggregate = { count: 0, average: 0 };
 
-  function star(filled) { return filled ? '★' : '☆'; }
+  // --- utils ---
+  const stripQuotes = (s) => typeof s === 'string' ? s.replace(/^"|"$/g, '') : s;
+  const escapeHtml = (s='') =>
+    s.replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
-  function renderCard(item) {
-    const rating = Number(item.rating) || 0;
-    const stars = Array.from({ length: 5 }, (_, i) => star(i < rating)).join(' ');
-    const meta = [item.name || 'Anonymous', item.city || ''].filter(Boolean).join(' • ');
-    const date = new Date(item.created_at).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'2-digit' });
-    const bodyText = item.comment ?? item.review_text ?? '';
+  const fmtDate = (iso) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+    } catch { return ''; }
+  };
 
-    const el = document.createElement('article');
-    el.className = 'rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5';
-    el.setAttribute('itemScope', '');
-    el.setAttribute('itemType', 'https://schema.org/Review');
-    el.innerHTML = `
-      <div class="text-amber-500 text-lg" aria-label="${rating} out of 5 stars">${stars}</div>
-      <p class="mt-2 text-slate-800" itemprop="reviewBody"></p>
-      <div class="mt-3 text-sm text-slate-600 flex items-center justify-between">
-        <span itemprop="author" itemScope itemType="https://schema.org/Person">
-          <span itemprop="name">${meta || 'Customer'}</span>
-        </span>
-        <time itemprop="datePublished" datetime="${item.created_at}">${date}</time>
-      </div>
-      <meta itemprop="reviewRating" content="${rating}" />
-      <meta itemprop="itemReviewed" content="${brandName}" />
+  const star = (filled) =>
+    `<svg viewBox="0 0 20 20" class="inline h-4 w-4 ${filled ? 'fill-amber-400' : 'fill-slate-200'}" aria-hidden="true">
+      <path d="M10 15.27 16.18 19l-1.64-7.03L20 7.24l-7.19-.61L10 0 7.19 6.63 0 7.24l5.46 4.73L3.82 19z"/>
+     </svg>`;
+
+  const stars = (n) => {
+    const score = Math.max(1, Math.min(5, Number(n) || 5));
+    return `<div class="mb-2" aria-label="${score} out of 5 stars">
+      ${[...Array(5)].map((_, i) => star(i < score)).join('')}
+    </div>`;
+  };
+
+  const cardHTML = (r) => {
+    const rating = Number(r.rating) || 5;
+    const meta   = [r.name || 'Customer', r.city || ''].filter(Boolean).join(' • ');
+    const date   = fmtDate(r.created_at);
+    const body   = escapeHtml(stripQuotes(r.comment ?? r.review_text ?? ''));
+
+    return `
+      <article class="ac-review-card">
+        ${stars(rating)}
+        <blockquote class="text-slate-800 leading-relaxed">${body}</blockquote>
+        <div class="mt-4 flex items-center justify-between text-sm text-slate-600">
+          <span>${escapeHtml(meta)}</span>
+          <time datetime="${r.created_at || ''}">${date}</time>
+        </div>
+      </article>
     `;
-    el.querySelector('[itemprop="reviewBody"]').textContent = bodyText;
-    return el;
-  }
+  };
 
-  function updateJsonLd() {
-    const data = {
+  const updateJsonLd = () => {
+    jsonLdEl.textContent = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "Product",
-      "name": brandName,
+      "name": brand,
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": aggregate.average || 0,
         "reviewCount": aggregate.count || 0
       }
-    };
-    jsonLdEl.textContent = JSON.stringify(data);
-  }
+    });
+  };
 
   async function safeJson(res) {
     const text = await res.text();
-    try { return JSON.parse(text); } catch { return { ok:false, error: text.slice(0,200) }; }
+    try { return JSON.parse(text); } catch { return { ok:false, error: text.slice(0,180) }; }
   }
 
-  async function load() {
-    if (!hasMore) return;
-    loadMoreBtn.disabled = true;
+  async function fetchAllReviews() {
+    const pageSize = 24;
+    let page = 1, all = [], more = true;
+    while (more && page <= 20) {
+      const url = new URL(`${FN_BASE}/reviews-list`, location.origin);
+      url.searchParams.set('page', String(page));
+      url.searchParams.set('pageSize', String(pageSize));
+      const res  = await fetch(url.toString(), { headers: { accept: 'application/json' } });
+      const data = await safeJson(res);
+      if (!res.ok || !data?.ok) break;
+      aggregate = data.aggregate || aggregate;
+      all  = all.concat(Array.isArray(data.items) ? data.items : []);
+      more = !!data.hasMore;
+      page += 1;
+    }
+    return all;
+  }
 
-    const res = await fetch(`${FN_BASE}/reviews-list?page=${page}&pageSize=${encodeURIComponent(PAGE_SIZE)}`);
-    const data = await safeJson(res);
-    if (!res.ok || !data?.ok) {
-      loadMoreBtn.textContent = 'Failed to load';
+  // --- RAF marquee ---
+  let offset = 0;          // current translateX in px (negative values)
+  let lastTs = 0;
+  let copyWidth = 0;       // width of the first copy in px
+  let paused = false;
+  let rafId;
+
+  const step = (ts) => {
+    if (!lastTs) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;         // seconds since last frame
+    lastTs = ts;
+
+    if (!paused) {
+      offset -= SPEED * dt;                  // move left
+      if (-offset >= copyWidth) offset += copyWidth; // seamless wrap
+      runner.style.transform = `translate3d(${offset}px,0,0)`;
+    }
+
+    rafId = requestAnimationFrame(step);
+  };
+
+  const setPause = (v) => { paused = v; };
+  const attachPauseHandlers = () => {
+    wrap.addEventListener('mouseenter', () => setPause(true));
+    wrap.addEventListener('mouseleave', () => setPause(false));
+    wrap.addEventListener('touchstart', () => setPause(true), { passive: true });
+    wrap.addEventListener('touchend',   () => setPause(false), { passive: true });
+  };
+
+  (async () => {
+    const items = await fetchAllReviews();
+
+    if (!items.length) {
+      runner.innerHTML = '<p class="text-sm text-slate-500">No reviews yet. Be the first to share your experience!</p>';
       return;
     }
-    aggregate = data.aggregate || aggregate;
-    (data.items || []).forEach(item => grid.appendChild(renderCard(item)));
-    hasMore = !!data.hasMore;
-    if (!hasMore) document.getElementById('ac-reviews-actions')?.classList.add('hidden');
-    updateJsonLd();
-    page += 1;
-    loadMoreBtn.disabled = false;
-  }
 
-  loadMoreBtn?.addEventListener('click', load);
-  load();
+    // Build one row
+    const one = document.createElement('div');
+    one.className = 'flex gap-4';
+    one.innerHTML = items.map(cardHTML).join('');
+
+    // Clone for seamless loop
+    const two = document.createElement('div');
+    two.className = 'flex gap-4';
+    two.innerHTML = one.innerHTML;
+
+    runner.innerHTML = '';
+    runner.appendChild(one);
+    runner.appendChild(two);
+
+    // Measure the width of one copy after it paints
+    requestAnimationFrame(() => {
+      copyWidth = one.getBoundingClientRect().width;
+      updateJsonLd();
+      // Start the loop
+      cancelAnimationFrame(rafId);
+      lastTs = 0;
+      rafId = requestAnimationFrame(step);
+    });
+
+    // Re-compute on resize
+    let resizeRaf;
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        copyWidth = one.getBoundingClientRect().width;
+      });
+    }, { passive: true });
+
+    attachPauseHandlers();
+  })();
 })();
 </script>
