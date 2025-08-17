@@ -71,5 +71,129 @@ const GA_ID = import.meta.env.PUBLIC_GA4_ID || '';
 
     <!-- ✅ Nudge mounted once site-wide -->
     <ReviewNudge />
+    <script is:inline type="module">
+    (() => {
+      // ---- UTM CAPTURE ----
+      const p = new URLSearchParams(location.search);
+      const utmKeys = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid'];
+      const utm = Object.fromEntries(
+        utmKeys.map(k => [k, p.get(k) || ''])
+      );
+      const sawUtm = Object.values(utm).some(Boolean);
+      if (sawUtm) {
+        utm.ts = Date.now();
+        try { localStorage.setItem('ac_utm', JSON.stringify(utm)); } catch {}
+        if (window.gtag) window.gtag('event', 'utm_seen', { non_interaction: true, ...utm, page_path: location.pathname });
+      }
+      function getUtm() {
+        try { return JSON.parse(localStorage.getItem('ac_utm') || '{}'); } catch { return {}; }
+      }
+
+      // ---- LEAD FORM HARNESS ----
+      function hydrateLeadForms() {
+        const utm = getUtm();
+        document.querySelectorAll('form[data-ac-lead-form]').forEach((form) => {
+          // Ensure hidden fields
+          const ensure = (name, val) => {
+            let el = form.querySelector(`input[name="${name}"]`);
+            if (!el) { el = document.createElement('input'); el.type = 'hidden'; el.name = name; form.appendChild(el); }
+            el.value = val || '';
+          };
+          ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid'].forEach(k => ensure(k, utm[k] || ''));
+          ensure('page_path', location.pathname);
+          ensure('referrer', document.referrer || '');
+
+          // Honeypot
+          if (!form.querySelector('input[name="company"]')) {
+            const hp = document.createElement('input');
+            hp.type = 'text'; hp.name = 'company'; hp.tabIndex = -1; hp.autocomplete = 'off'; hp.className = 'hidden';
+            form.appendChild(hp);
+          }
+
+          // Bind submit
+          if (form.__acBound) return;
+          form.addEventListener('submit', async (e) => {
+            try {
+              const method = (form.getAttribute('method') || 'post').toLowerCase();
+              if (method !== 'post') return;
+              e.preventDefault();
+
+              const fd = new FormData(form);
+              const name = (fd.get('name') || '').toString().trim();
+              const phone = (fd.get('phone') || '').toString().trim();
+              if (!name || phone.replace(/\D/g,'').length < 8) {
+                alert('Please enter your name and a valid phone.'); return;
+              }
+
+              const payload = Object.fromEntries(fd.entries());
+              const res = await fetch('/api/leads-submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              const data = await res.json().catch(() => ({}));
+              if (res.ok && data?.ok) {
+                if (window.gtag) window.gtag('event', 'lead_submit', { method: 'form', page_path: location.pathname, ...utm });
+                form.reset();
+                alert('Thanks! We will contact you shortly.');
+              } else {
+                alert(data?.error || 'Submission failed. Please WhatsApp us.');
+              }
+            } catch {
+              alert('Something went wrong. Please WhatsApp us.');
+            }
+          });
+          form.__acBound = true;
+        });
+      }
+      hydrateLeadForms();
+
+      // ---- WHATSAPP CTA ----
+      function buildWa(number, msg) {
+        number = (number || '').replace(/[^\d]/g,'');
+        return 'https://wa.me/' + number + '?text=' + encodeURIComponent(msg);
+      }
+      function summarizeUtm(utm) {
+        const bits = [];
+        if (utm.utm_source) bits.push(`src=${utm.utm_source}`);
+        if (utm.utm_medium) bits.push(`med=${utm.utm_medium}`);
+        if (utm.utm_campaign) bits.push(`cmp=${utm.utm_campaign}`);
+        if (utm.gclid) bits.push('gclid=1');
+        return bits.join(',');
+      }
+      function attachWhatsApp() {
+        const utm = getUtm();
+        const page = location.pathname;
+        document.querySelectorAll('a[data-wa],button[data-wa]').forEach((el) => {
+          if (el.__acWaBound) return;
+          el.addEventListener('click', (e) => {
+            const num = el.getAttribute('data-wa-number') || '';
+            if (!num) return; // let native click happen if not configured
+            e.preventDefault();
+
+            const form = document.querySelector('form[data-ac-lead-form]');
+            const val = (n) => form ? (form.querySelector(`[name="${n}"]`)?.value || '') : '';
+            const msg = [
+              'Hi Axis Cabs, I have a query:',
+              val('name') ? `Name: ${val('name')}` : '',
+              val('phone') ? `Phone: ${val('phone')}` : '',
+              val('from_city') || val('from') ? `From: ${val('from_city') || val('from')}` : '',
+              val('to_city') || val('to') ? `To: ${val('to_city') || val('to')}` : '',
+              val('date') ? `Date: ${val('date')}` : '',
+              val('time') ? `Time: ${val('time')}` : '',
+              `Page: ${page}`,
+              summarizeUtm(utm) ? `UTM: ${summarizeUtm(utm)}` : ''
+            ].filter(Boolean).join('\n');
+
+            const href = buildWa(num, msg);
+            if (window.gtag) window.gtag('event', 'whatsapp_click', { page_path: page, ...utm });
+            window.open(href, '_blank', 'noopener');
+          });
+          el.__acWaBound = true;
+        });
+      }
+      attachWhatsApp();
+    })();
+    </script>
   </body>
 </html>
