@@ -3,12 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
 
+// Prefer runtime env on Netlify
 const SUPABASE_URL =
-(import.meta.env.SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL) as string;
-const SERVICE_KEY = import.meta.env.SUPABASE_SERVICE_ROLE_KEY as string;
+(process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL) as string;
+const SERVICE_KEY =
+(process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY) as string;
 
-// We reuse this var for any downstream automation (Apps Script today, n8n later)
-const N8N_WEBHOOK = (import.meta.env.N8N_LEADS_WEBHOOK_URL || '') as string;
+// Generic downstream webhook (Apps Script today, n8n later)
+const N8N_WEBHOOK =
+(process.env.N8N_LEADS_WEBHOOK_URL || import.meta.env.N8N_LEADS_WEBHOOK_URL || '') as string;
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -17,6 +20,20 @@ function json(status: number, body: unknown) {
   });
 }
 
+// Simple debug endpoint: /api/leads-submit?debug=1
+export const GET: APIRoute = async ({ url }) => {
+  if (url.searchParams.get('debug') === '1') {
+    const host = N8N_WEBHOOK ? new URL(N8N_WEBHOOK).host : null;
+    return json(200, {
+      ok: true,
+      hasWebhook: Boolean(N8N_WEBHOOK),
+      webhookHost: host,
+      // redact the path for safety
+    });
+  }
+  return json(200, { ok: true, msg: 'Use POST to submit leads.' });
+};
+
 // ---- helpers ----
 const REQUIRED_KEYS = new Set(['name', 'whatsapp']);
 const digits = (s: any) => String(s ?? '').replace(/\D/g, '');
@@ -24,7 +41,7 @@ const emptyToNull = (v: any) => (v === '' ? null : v);
 
 async function postWebhook(url: string, payload: Record<string, any>) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 1500); // cap at ~1.5s
+  const timer = setTimeout(() => ctrl.abort(), 3000); // up to ~3s for Apps Script
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -36,7 +53,7 @@ async function postWebhook(url: string, payload: Record<string, any>) {
   } catch {
     return false;
   } finally {
-    clearTimeout(t);
+    clearTimeout(timer);
   }
 }
 
@@ -45,8 +62,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (!SUPABASE_URL || !SERVICE_KEY) {
       return json(500, {
         ok: false,
-        error:
-          'Server misconfig: set SUPABASE_URL (or PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY',
+        error: 'Server misconfig: set SUPABASE_URL (or PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY',
       });
     }
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -56,7 +72,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
     const body = (await request.json()) as Record<string, any>;
 
-    // Honeypot: if filled, pretend success.
+    // Honeypot (company)
     if (typeof body.company === 'string' && body.company.trim() !== '') {
       return json(200, { ok: true, queued: true });
     }
@@ -67,7 +83,6 @@ export const POST: APIRoute = async ({ request }) => {
       return json(400, { ok: false, error: 'Name and valid phone required' });
     }
 
-    // Build maximal payload; we’ll prune unknown columns on error.
     const base: Record<string, any> = {
       source: 'web',
       status: 'new',
@@ -91,8 +106,6 @@ export const POST: APIRoute = async ({ request }) => {
       utm_content: String(body.utm_content || ''),
       gclid: String(body.gclid || ''),
     };
-
-    // If your table uses `page` (not `page_path`), fill it.
     if (base.page_path && !('page' in base)) base.page = base.page_path;
 
     let payload: Record<string, any> = { ...base };
@@ -101,7 +114,7 @@ export const POST: APIRoute = async ({ request }) => {
     for (let i = 0; i < 12; i++) {
       const ins = await supabase.from('leads').insert(payload).select('id').single();
       if (!ins.error) {
-        // ✅ Await the webhook (Apps Script today / n8n later)
+        // ✅ await the webhook so Netlify doesn't drop it
         if (N8N_WEBHOOK) {
           await postWebhook(N8N_WEBHOOK, { id: ins.data.id, ...payload });
         }
@@ -138,7 +151,7 @@ export const POST: APIRoute = async ({ request }) => {
       break;
     }
 
-    return json(500, { ok: false, errorcls: lastError?.message || 'Insert failed' });
+    return json(500, { ok: false, error: lastError?.message || 'Insert failed' });
   } catch (err: any) {
     console.error('[leads-submit] fatal:', err);
     return json(500, { ok: false, error: err?.message || 'Server error' });
