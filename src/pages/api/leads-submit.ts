@@ -6,6 +6,8 @@ export const prerender = false;
 const SUPABASE_URL =
 (import.meta.env.SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL) as string;
 const SERVICE_KEY = import.meta.env.SUPABASE_SERVICE_ROLE_KEY as string;
+
+// We reuse this var for any downstream automation (Apps Script today, n8n later)
 const N8N_WEBHOOK = (import.meta.env.N8N_LEADS_WEBHOOK_URL || '') as string;
 
 function json(status: number, body: unknown) {
@@ -15,10 +17,28 @@ function json(status: number, body: unknown) {
   });
 }
 
-const REQUIRED_KEYS = new Set(['name', 'whatsapp']); // never drop these
-
+// ---- helpers ----
+const REQUIRED_KEYS = new Set(['name', 'whatsapp']);
 const digits = (s: any) => String(s ?? '').replace(/\D/g, '');
 const emptyToNull = (v: any) => (v === '' ? null : v);
+
+async function postWebhook(url: string, payload: Record<string, any>) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 1500); // cap at ~1.5s
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -53,7 +73,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 'new',
       ua: (request.headers.get('user-agent') || '').slice(0, 255),
       name,
-      phone: phoneDigits, // may be dropped if your table doesn’t have it
+      phone: phoneDigits,
       whatsapp: digits(body.whatsapp || phoneDigits),
       from_city: emptyToNull(String(body.from_city || body.from || '').trim()),
       to_city: emptyToNull(String(body.to_city || body.to || '').trim()),
@@ -78,32 +98,25 @@ export const POST: APIRoute = async ({ request }) => {
     let payload: Record<string, any> = { ...base };
     let lastError: any = null;
 
-    // Try up to 12 times, pruning unknown columns reported by Postgres/Supabase.
     for (let i = 0; i < 12; i++) {
       const ins = await supabase.from('leads').insert(payload).select('id').single();
       if (!ins.error) {
-        // best-effort webhook
+        // ✅ Await the webhook (Apps Script today / n8n later)
         if (N8N_WEBHOOK) {
-          fetch(N8N_WEBHOOK, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: ins.data.id, ...payload }),
-          }).catch(() => {});
+          await postWebhook(N8N_WEBHOOK, { id: ins.data.id, ...payload });
         }
         return json(200, { ok: true, id: ins.data.id });
       }
 
       lastError = ins.error;
       const msg = String(ins.error?.message || '');
-
-      // Unknown column messages (two common shapes)
       const m1 = msg.match(/Could not find the '([^']+)' column/i);
       const m2 = msg.match(/column "([^"]+)" of relation "leads" does not exist/i);
       const unknown = (m1 && m1[1]) || (m2 && m2[1]) || null;
 
       if (unknown && unknown in payload && !REQUIRED_KEYS.has(unknown)) {
         delete payload[unknown];
-        continue; // retry with pruned payload
+        continue;
       }
 
       const lower = msg.toLowerCase();
@@ -114,19 +127,18 @@ export const POST: APIRoute = async ({ request }) => {
         lower.includes('value too long') ||
         lower.includes('type')
       ) {
-        break; // don’t loop on real constraints
+        break;
       }
 
-      // As a safety, if `phone` exists and causes trouble, drop it (keep `whatsapp`).
       if ('phone' in payload && lower.includes("'phone'")) {
         delete payload.phone;
         continue;
       }
 
-      break; // nothing else to prune → stop
+      break;
     }
 
-    return json(500, { ok: false, error: lastError?.message || 'Insert failed' });
+    return json(500, { ok: false, errorcls: lastError?.message || 'Insert failed' });
   } catch (err: any) {
     console.error('[leads-submit] fatal:', err);
     return json(500, { ok: false, error: err?.message || 'Server error' });
