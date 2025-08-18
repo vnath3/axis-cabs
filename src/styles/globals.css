@@ -3,16 +3,62 @@
 @tailwind utilities;
 
 :root { color-scheme: light; }
-
-body {
-  @apply bg-bg text-text antialiased;
-}
-
-.btn-primary {
-  @apply inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-white font-semibold shadow-soft transition duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/50;
-}
-
-.card {
-  @apply rounded-2xl bg-white shadow-soft p-6;
-}
 html { scroll-behavior: smooth; }
+
+body { @apply bg-bg text-text antialiased; }
+
+/* Card */
+.card { @apply rounded-2xl bg-white shadow-soft p-6; }
+
+/* ===== Axis Cabs — Design Tokens ===== */
+:root {
+  /* Brand */
+  --ac-brand: #ea580c;           /* orange-600 */
+  --ac-brand-hover: #c2410c;     /* orange-700 */
+
+  /* Text */
+  --ac-text: #0f172a;            /* slate-900 */
+  --ac-text-muted: #475569;      /* slate-600 */
+
+  /* Surfaces */
+  --ac-surface: #ffffff;
+  --ac-border: #e5e7eb;          /* gray-200 */
+}
+
+/* Typography helpers */
+.h3 { @apply text-xl md:text-2xl font-semibold; color: var(--ac-text); }
+.p  { @apply text-sm md:text-base; color: var(--ac-text-muted); }
+
+/* ===== Buttons — single source of truth =====
+   Backward compatible: base styles apply to .btn and to variant classes
+   so old markup that only uses .btn-primary keeps rounded corners/padding.
+*/
+.btn,
+.btn-primary,
+.btn-ghost,
+.btn-outline {
+  @apply inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold
+         transition duration-200 focus:outline-none focus:ring-2;
+}
+
+/* Color variants */
+.btn-primary {
+  background: var(--ac-brand);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--ac-brand-hover); }
+
+.btn-ghost {
+  @apply bg-gray-100;
+  color: var(--ac-text);
+}
+.btn-ghost:hover { @apply bg-gray-200; }
+
+.btn-outline {
+  border: 1px solid var(--ac-border);
+  background: var(--ac-surface);
+  color: var(--ac-text);
+}
+.btn-outline:hover { @apply bg-gray-50; }
+
+/* 🔻 Remove any older .btn-primary that used bg-primary to avoid conflicts */

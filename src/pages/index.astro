@@ -1,6 +1,6 @@
 ---
 /* Page: src/pages/index.astro
-   This page uses the Base layout to handle the <html>, <head>, header/footer wrapper, etc.
+   Base layout handles <html>, <head>, header/footer wrapper, etc.
    Put page-specific <head> tags inside <Fragment slot="head">.
    Put visible content (hero, forms, etc.) inside the default slot.
 */
@@ -15,20 +15,18 @@ import Analytics from '@/components/Analytics.astro';
 import JsonLd from '@/components/JsonLd.astro';
 import Base from '@/layouts/Base.astro';
 import ReviewsSection from '@/components/ReviewsSection.astro';
+import FareCalcCard from '@/components/FareCalcCard.astro';
+import FareCalculatorModal from '@/components/FareCalculatorModal.astro';
 
 const brand = 'Axis Cabs';
 const site = 'https://axis-cabs.netlify.app';
 ---
 
-<!-- These props set <title> and meta description -->
 <Base
   title="Axis Cabs — Ground Travel & Itineraries, Sorted."
   description="Book intercity cabs, itineraries, and hidden gems across India. Transparent fares, professional drivers, 24×7 support."
 >
-  {/*
-    Named slot: extra <head> tags that are specific to THIS page.
-    Keep JSON-LD, OG tags, favicon, and analytics here.
-  */}
+  <!-- Page-specific <head> -->
   <Fragment slot="head">
     <link rel="icon" href="/favicon.svg" />
     <meta property="og:title" content="Axis Cabs" />
@@ -54,14 +52,10 @@ const site = 'https://axis-cabs.netlify.app';
       "url": site
     }} />
 
-    {/* GA/analytics scripts (kept in head) */}
     <Analytics />
   </Fragment>
 
-  {/*
-    Default slot: the visible body content of the page.
-    You can reorder or replace these sections as needed.
-  */}
+  <!-- Visible body -->
   <Header />
 
   <Hero
@@ -69,17 +63,17 @@ const site = 'https://axis-cabs.netlify.app';
     sub="Instant WhatsApp quotes • Transparent fares • 24×7 support"
   />
 
-  <!-- Grid: heading takes first row (full width). Cards align on second row. -->
+  <!-- Main grid -->
   <main class="mx-auto max-w-6xl px-4 grid md:grid-cols-3 gap-8 items-start">
-    <!-- Row 1: Heading spans all columns -->
+    <!-- Heading spans all columns -->
     <h2 class="text-xl font-bold mb-0 md:col-span-3">Plan Your Trip</h2>
 
-    <!-- Row 2: Left card (Lead form) spans 2 columns on md+ -->
+    <!-- Left: Lead form (2 columns on md+) -->
     <div class="md:col-span-2">
       <LeadForm />
     </div>
 
-    <!-- Row 2: Right card (Popular Routes) spans 1 column -->
+    <!-- Right: Popular Routes card + Fare Calculator trigger card -->
     <aside class="space-y-4">
       <div class="card">
         <h3 class="font-semibold mb-2">Popular Routes</h3>
@@ -89,10 +83,16 @@ const site = 'https://axis-cabs.netlify.app';
           <li><a class="underline" href="/city-to-city/jaipur-to-udaipur-cab">Jaipur → Udaipur</a></li>
         </ul>
       </div>
+
+      <!-- Separate trigger card just below Popular Routes -->
+      <FareCalcCard />
     </aside>
   </main>
 
+  <!-- Modal lives ONCE per page (outside grid) -->
+  <FareCalculatorModal />
+
   <StickyCTAs />
-    <ReviewsSection />
+  <ReviewsSection />
   <Footer />
 </Base>

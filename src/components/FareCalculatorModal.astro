@@ -1,0 +1,200 @@
+---
+/**
+ * FareCalculatorModal.astro
+ * - From/To typeahead (min 1 char; Enter/Tab picks first)
+ * - Clean buttons via tokens
+ * - No WhatsApp button, no phone field (per your decision)
+ */
+const defaultFrom = '';
+const defaultTo = '';
+---
+
+<style>
+  .ac-modal { @apply fixed inset-0 z-50 flex items-end md:items-center justify-center; }
+  .ac-backdrop { @apply absolute inset-0 bg-black/50; }
+  .ac-sheet { @apply relative w-full md:max-w-3xl bg-white rounded-t-2xl md:rounded-2xl shadow-xl p-4 md:p-6; }
+  .ac-label { @apply text-xs font-medium text-gray-600; }
+  .ac-input { @apply w-full rounded-lg border border-gray-200 px-3 py-2 text-sm; }
+  .ac-pill { @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium; }
+  .ac-ta-wrap { @apply relative; }
+  .ac-ta-list { @apply absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-md; }
+  .ac-ta-item { @apply px-3 py-2 text-sm cursor-pointer hover:bg-gray-50; }
+  .ac-ta-empty { @apply px-3 py-2 text-xs text-gray-500; }
+</style>
+
+<div id="farecalc-modal" class="hidden" aria-hidden="true">
+  <div class="ac-modal">
+    <div class="ac-backdrop" data-close></div>
+    <div class="ac-sheet">
+      <div class="flex items-start justify-between gap-4 mb-3">
+        <h3 class="h3">Fare Calculator</h3>
+        <button class="btn btn-ghost" data-close aria-label="Close">✕</button>
+      </div>
+
+      <form id="farecalc-form" class="space-y-4" autocomplete="off">
+        <!-- Cities -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="ac-ta-wrap">
+            <label class="ac-label">From</label>
+            <input name="from" id="fc-from" class="ac-input" value={defaultFrom} placeholder="Type a city…" />
+            <div id="fc-from-list" class="ac-ta-list hidden" role="listbox" aria-label="From city suggestions"></div>
+          </div>
+          <div class="ac-ta-wrap">
+            <label class="ac-label">To</label>
+            <input name="to" id="fc-to" class="ac-input" value={defaultTo} placeholder="Type a city…" />
+            <div id="fc-to-list" class="ac-ta-list hidden" role="listbox" aria-label="To city suggestions"></div>
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="ac-label">Vehicle</label>
+            <select name="vehicle" class="ac-input">
+              <option value="sedan">Sedan</option>
+              <option value="suv">SUV</option>
+              <option value="luxury">Luxury</option>
+            </select>
+          </div>
+          <div class="md:col-span-2 flex items-center gap-4">
+            <label class="ac-label mr-2">Trip</label>
+            <label class="inline-flex items-center gap-2 text-sm">
+              <input type="radio" name="roundtrip" value="0" checked /> One-way
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm">
+              <input type="radio" name="roundtrip" value="1" /> Round trip
+            </label>
+          </div>
+        </div>
+
+        <!-- Result -->
+        <div id="farecalc-result" class="rounded-xl border border-gray-200 p-4">
+          <div class="p">Enter cities and click “Get Estimate”.</div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-between">
+          <button type="button" class="btn btn-ghost" data-close>Close</button>
+          <button id="btn-estimate" type="submit" class="btn btn-primary">Get Estimate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  const root = document.getElementById('farecalc-modal');
+  const form = root.querySelector('#farecalc-form');
+  const result = root.querySelector('#farecalc-result');
+
+  const show = () => { root.classList.remove('hidden'); root.setAttribute('aria-hidden','false'); };
+  const hide = () => { root.classList.add('hidden'); root.setAttribute('aria-hidden','true'); };
+  root.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.close !== undefined) hide(); });
+  root.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', hide));
+  window.addEventListener('farecalc:open', show);
+
+  const rs = (n:number) => '₹ ' + n.toLocaleString('en-IN');
+
+  // ---- Typeahead (min 1 char, Enter/Tab picks first) ----
+  const makeTA = (inputId:string, listId:string) => {
+    const $input = root.querySelector<HTMLInputElement>(inputId)!;
+    const $list  = root.querySelector<HTMLDivElement>(listId)!;
+
+    const closeList = () => { $list.innerHTML=''; $list.classList.add('hidden'); };
+    const openList = () => { $list.classList.remove('hidden'); };
+
+    const fetchCities = async (q:string) => {
+      const r = await fetch('/api/cities?q=' + encodeURIComponent(q), { cache: 'no-store' });
+      const j = await r.json();
+      return (j.ok && Array.isArray(j.items)) ? j.items as {city:string}[] : [];
+    };
+
+    const render = (items:{city:string}[]) => {
+      if (!items.length) { $list.innerHTML = `<div class="ac-ta-empty">No matches</div>`; openList(); return; }
+      $list.innerHTML = items.map(i => `<div class="ac-ta-item" data-city="${i.city}">${i.city}</div>`).join('');
+      openList();
+    };
+
+    let timer:any=null;
+    $input.addEventListener('input', () => {
+      const q = $input.value.trim();
+      if (q.length < 1) { closeList(); return; }
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(async () => { render(await fetchCities(q)); }, 200);
+    });
+
+    // click choose
+    $list.addEventListener('click', (e) => {
+      const el = (e.target as HTMLElement).closest('[data-city]') as HTMLElement | null;
+      if (!el) return;
+      $input.value = el.dataset.city || '';
+      closeList();
+      $input.dispatchEvent(new Event('change'));
+    });
+
+    // Enter/Tab -> pick first suggestion if open
+    $input.addEventListener('keydown', (e:KeyboardEvent) => {
+      if ((e.key === 'Enter' || e.key === 'Tab') && !$list.classList.contains('hidden')) {
+        const first = $list.querySelector<HTMLElement>('[data-city]');
+        if (first) {
+          e.preventDefault();
+          $input.value = first.dataset.city || '';
+          closeList();
+          $input.dispatchEvent(new Event('change'));
+          if (e.key === 'Tab') (document.activeElement as HTMLElement)?.blur();
+        }
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!$list.contains(e.target as Node) && !$input.contains(e.target as Node)) closeList();
+    });
+  };
+  makeTA('#fc-from', '#fc-from-list');
+  makeTA('#fc-to', '#fc-to-list');
+
+  // ---- Estimate ----
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const v = Object.fromEntries(new FormData(form) as any) as any;
+    const params = new URLSearchParams({
+      from: String(v.from || '').toLowerCase(),
+      to: String(v.to || '').toLowerCase(),
+      vehicle: String(v.vehicle || 'sedan').toLowerCase(),
+      roundtrip: String(v.roundtrip || '0'),
+    });
+    if (!params.get('from') || !params.get('to')) {
+      result.innerHTML = `<div class="text-sm text-red-600">Please choose both cities.</div>`;
+      return;
+    }
+
+    result.innerHTML = '<div class="p">Calculating…</div>';
+
+    try {
+      const r = await fetch('/api/fare-quote?' + params.toString(), { cache: 'no-store' });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'failed');
+
+      const fare = j.fare, dist = j.distance;
+
+      result.innerHTML = `
+        <div class="flex items-baseline gap-3">
+          <div class="text-2xl md:text-3xl font-bold">${rs(fare.low)} – ${rs(fare.high)}</div>
+          <span class="ac-pill border-gray-200 text-gray-600">All-inclusive</span>
+        </div>
+        <div class="mt-2 p">
+          ${j.meta.from} → ${j.meta.to} • ${dist.km} km ${dist.highway_note ? ' • ' + dist.highway_note : ''}
+        </div>
+        <hr class="my-3" />
+        <dl class="grid grid-cols-2 gap-y-1 text-sm">
+          <dt class="text-gray-500">Base fare</dt><dd class="text-right">${rs(fare.breakdown.base)} <span class="text-xs text-gray-400">(${fare.breakdown.km_billable} km × ₹${fare.breakdown.per_km})</span></dd>
+          <dt class="text-gray-500">Tolls &amp; DA</dt><dd class="text-right">₹ ${fare.breakdown.toll_low}–${fare.breakdown.toll_high} + ${rs(fare.breakdown.da)}</dd>
+          ${fare.breakdown.night_fee ? `<dt class="text-gray-500">Night surcharge</dt><dd class="text-right">${rs(fare.breakdown.night_fee)}</dd>` : ''}
+        </dl>
+        <p class="mt-2 text-xs text-gray-500">Final fare may vary by traffic, vehicle, and timing. No hidden charges.</p>
+      `;
+    } catch (err) {
+      result.innerHTML = `<div class="text-sm text-red-600">Couldn’t calculate. Try a different route or check later.</div>`;
+    }
+  });
+</script>
