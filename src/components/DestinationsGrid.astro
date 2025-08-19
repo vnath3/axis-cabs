@@ -1,0 +1,211 @@
+---
+/**
+ * DestinationsGrid.astro
+ * Semantic, accessible destination/packages grid with optional mobile carousel.
+ * SEO: (1) ItemList → Product → Offer per card
+ *      (2) Section-level Product with aggregateOffer (min/max/offerCount)
+ *
+ * Props:
+ * - items?: DestinationItem[] (defaults to src/data/destinations)
+ * - mobileCarousel?: boolean (default: true)
+ * - heading?: string (default: "Destinations & Experiences")
+ */
+import type { DestinationItem } from "@/data/destinations";
+import { destinations as defaultItems } from "@/data/destinations";
+
+interface Props {
+  items?: DestinationItem[];
+  mobileCarousel?: boolean;
+  heading?: string;
+}
+
+const {
+  items = defaultItems,
+  mobileCarousel = true,
+  heading = "Destinations & Experiences"
+} = Astro.props;
+
+const WA = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || "+919922333305").replace(/\D/g, "");
+
+// Base site URL: prefer Astro.site if set; fallback to canonical
+const siteBase = (Astro.site?.toString() || "https://axiscabs.com").replace(/\/$/, "");
+const orgId = `${siteBase}/#org`;
+
+// Helpers
+function absUrl(path: string) {
+  if (!path) return siteBase;
+  if (path.startsWith("http")) return path;
+  return `${siteBase}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
+function waHrefFor(item: DestinationItem) {
+  const text = encodeURIComponent(
+    `Hi Axis Cabs 👋
+I'm interested in "${item.title}" (${item.duration}).
+Please share best price and inclusions.
+Website: ${absUrl(item.slug)}`
+  );
+  return `https://wa.me/${WA}?text=${text}`;
+}
+
+function formatINR(n: number) {
+  try {
+    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+  } catch {
+    return `₹${n.toLocaleString("en-IN")}`;
+  }
+}
+
+/* ----------------- JSON-LD (1): ItemList with per-card Offers ----------------- */
+const jsonLdItemList = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Destinations & Experiences",
+  "itemListOrder": "https://schema.org/ItemListOrderAscending",
+  "itemListElement": items.map((item, idx) => ({
+    "@type": "ListItem",
+    "position": idx + 1,
+    "url": absUrl(item.slug),
+    "item": {
+      "@type": "Product",
+      "name": item.title,
+      "category": "TravelPackage",
+      "additionalType": "https://schema.org/TouristTrip",
+      "description": `${item.title} – ${item.duration}. Includes ${item.highlights.join(", ")}.`,
+      "image": absUrl(item.image?.src || ""),
+"brand": { "@id": "https://axiscabs.com/#org" },
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "INR",
+        "price": item.priceFromINR, // number
+        "availability": "https://schema.org/InStock",
+        "url": absUrl(item.slug),
+        "itemOffered": {
+          "@type": "Service",
+          "name": `${item.title} Package`,
+          "areaServed": "IN"
+        }
+      }
+    }
+  }))
+};
+
+/* ----------------- JSON-LD (2): Section-level AggregateOffer ----------------- */
+const prices = items.map(i => i.priceFromINR).filter(n => typeof n === 'number' && !Number.isNaN(n));
+const lowPrice = prices.length ? Math.min(...prices) : undefined;
+const highPrice = prices.length ? Math.max(...prices) : undefined;
+
+const jsonLdAggregate = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Axis Cabs — Destinations & Experiences",
+  "category": "TravelPackage",
+  "url": siteBase + "/", // section is on the homepage
+  "aggregateOffer": {
+    "@type": "AggregateOffer",
+    "priceCurrency": "INR",
+    ...(lowPrice !== undefined ? { "lowPrice": lowPrice } : {}),
+    ...(highPrice !== undefined ? { "highPrice": highPrice } : {}),
+    "offerCount": items.length
+  },
+"brand": { "@id": "https://axiscabs.com/#org" }
+};
+
+// Pre-stringify for clean injection
+const jsonLd1 = JSON.stringify(jsonLdItemList);
+const jsonLd2 = JSON.stringify(jsonLdAggregate);
+---
+
+<section aria-labelledby="destinations-heading" class="py-12 sm:py-16 bg-white">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+    <header class="mb-6 sm:mb-10 text-center">
+      <h2 id="destinations-heading" class="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900">
+        {heading}
+      </h2>
+      <p class="mt-2 text-gray-600">Curated trips with cab, stay &amp; tickets—just book and go.</p>
+    </header>
+
+    <!-- Mobile carousel wrapper (optional) -->
+    <div class:list={[
+      "gap-6",
+      mobileCarousel ? "flex overflow-x-auto snap-x snap-mandatory -mx-4 px-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:mx-0 sm:px-0" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+    ]}
+    style={mobileCarousel ? "scroll-padding-left: 1rem;" : undefined}
+    >
+      {items.map((item) => (
+        <article
+          class:list={[
+            "group bg-white rounded-2xl shadow-sm ring-1 ring-gray-200/70 hover:ring-gray-300 transition-all duration-200",
+            "focus-within:ring-gray-400",
+            mobileCarousel ? "min-w-[85%] snap-start sm:min-w-0" : ""
+          ]}
+          tabindex="-1"
+          aria-label={item.title}
+        >
+          <a href={item.slug} class="block rounded-t-2xl overflow-hidden">
+            <img
+              src={item.image.src}
+              alt={item.image.alt}
+              loading="lazy"
+              class="w-full h-48 sm:h-44 lg:h-52 object-cover"
+            />
+          </a>
+
+          <div class="p-4 sm:p-5">
+            <div class="flex items-start justify-between gap-3">
+              <h3 class="text-lg font-semibold text-gray-900">
+                <a href={item.slug} class="hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded">
+                  {item.title}
+                </a>
+              </h3>
+              <span class="inline-flex items-center rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
+                {item.duration}
+              </span>
+            </div>
+
+            <ul class="mt-3 flex flex-wrap gap-2" aria-label="Highlights">
+              {item.highlights.map((h) => (
+                <li class="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-50 text-gray-700 ring-1 ring-gray-200">{h}</li>
+              ))}
+            </ul>
+
+            <div class="mt-4 flex items-center justify-between">
+              <div class="text-sm text-gray-600">
+                <span class="block text-xs uppercase tracking-wide text-gray-500">Starting from</span>
+                <span class="text-base font-semibold text-gray-900">{formatINR(item.priceFromINR)}</span>
+              </div>
+
+              <div class="flex gap-2">
+                <a
+                  href={item.slug}
+                  class="inline-flex items-center justify-center rounded-lg px-3.5 py-2 text-sm font-medium
+                         bg-orange-600 text-white hover:bg-orange-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-orange-500"
+                  data-analytics="cta_view_package"
+                  data-destination={item.title}
+                >
+                  View Package
+                </a>
+                <a
+                  href={waHrefFor(item)}
+                  target="_blank" rel="noopener noreferrer"
+                  class="inline-flex items-center justify-center rounded-lg px-3.5 py-2 text-sm font-medium
+                         bg-green-600 text-white hover:bg-green-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-600"
+                  aria-label={`Get quote on WhatsApp for ${item.title}`}
+                  data-analytics="cta_whatsapp_quote"
+                  data-destination={item.title}
+                >
+                  WhatsApp
+                </a>
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <!-- JSON-LD: (1) ItemList of Product Offers -->
+    <script type="application/ld+json" is:inline set:html={jsonLd1} />
+    <!-- JSON-LD: (2) Section-level Product with AggregateOffer -->
+    <script type="application/ld+json" is:inline set:html={jsonLd2} />
+  </div>
+</section>

@@ -1,22 +1,33 @@
-<script type="application/ld+json">
-{
-  "@context":"https://schema.org",
-  "@type":"Organization",
-  "name":"Axis Cabs",
-  "url":"https://axiscabs.com",
-  "logo":"https://axiscabs.com/favicon.svg"
-}
-</script>
-<script type="application/ld+json">
-{
-  "@context":"https://schema.org",
-  "@type":"WebSite",
-  "url":"https://axiscabs.com",
-  "name":"Axis Cabs",
-  "potentialAction":{
-    "@type":"SearchAction",
-    "target":"https://axiscabs.com/search?q={query}",
-    "query-input":"required name=query"
+---
+// src/components/JsonLd.astro
+const site = (Astro.site?.toString() || "https://axiscabs.com").replace(/\/$/, "");
+const orgId = `${site}/#org`;
+const websiteId = `${site}/#website`;
+
+const organization = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": orgId,
+  "name": "Axis Cabs",
+  "url": site,
+  "logo": `${site}/favicon.svg`
+};
+
+const website = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": websiteId,
+  "url": site,
+  "name": "Axis Cabs",
+  "publisher": { "@id": orgId },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": `${site}/search?q={query}`,
+    "query-input": "required name=query"
   }
-}
-</script>
+};
+---
+<script type="application/ld+json" is:inline set:html={JSON.stringify(organization)} />
+<script type="application/ld+json" is:inline set:html={JSON.stringify(website)} />
+
+

@@ -2,21 +2,60 @@
 /**
  * ReviewsSection.astro — Single-row, continuously moving reviews marquee
  * Implementation: requestAnimationFrame loop (px/second), seamless loop via row duplication.
- * - No dependency on CSS animation (so it will move even if reduced-motion is set)
  * - Pauses on hover/touch
  * - Fetches all pages from /api/reviews-list and concatenates
- * - Injects AggregateRating JSON-LD
+ * - Injects AggregateRating JSON-LD (server-rendered baseline + client updates)
  */
-const BRAND_NAME = 'Axis Cabs';
-const FN_BASE = '/api';
-const SPEED_PX_PER_SEC = 60; // marquee speed (lower = slower)
+
+import type { ReviewsAggregate } from "@/data/reviews-aggregate";
+
+interface Props {
+  brand?: string;
+  fnBase?: string;
+  speed?: number;               // px/sec
+  aggregate?: ReviewsAggregate; // { average: number; count: number }
+}
+
+const BRAND_NAME_DEFAULT = "Axis Cabs";
+const FN_BASE_DEFAULT = "/api";
+const SPEED_PX_PER_SEC_DEFAULT = 60;
+
+const {
+  brand = BRAND_NAME_DEFAULT,
+  fnBase = FN_BASE_DEFAULT,
+  speed = SPEED_PX_PER_SEC_DEFAULT,
+  aggregate
+} = Astro.props;
+
+// Absolute site (for @id linking and canonical URLs)
+const site = (Astro.site?.toString() || "https://axiscabs.com").replace(/\/$/, "");
+const orgId = `${site}/#org`;
+
+// Server-rendered JSON-LD baseline (so Google can see ratings without JS)
+const reviewsJsonLd = aggregate
+  ? JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "TaxiService",     // more specific than LocalBusiness
+      "@id": orgId,
+      "name": brand,
+      "url": site,
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": Number(aggregate.average.toFixed(1)),
+        "reviewCount": aggregate.count
+      }
+    })
+  : "";
 ---
+
 <section
   id="reviews"
   class="py-12 sm:py-16 bg-slate-50"
-  data-fn-base={FN_BASE}
-  data-brand={BRAND_NAME}
-  data-speed={String(SPEED_PX_PER_SEC)}
+  data-fn-base={fnBase}
+  data-brand={brand}
+  data-speed={String(speed)}
+  data-org-id={orgId}
+  data-site={site}
 >
   <div class="mx-auto max-w-6xl px-4">
     <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">What customers say</h2>
@@ -32,16 +71,17 @@ const SPEED_PX_PER_SEC = 60; // marquee speed (lower = slower)
       <div id="ac-marquee-runner" class="flex gap-4 will-change-transform"></div>
     </div>
 
-    <script id="ac-reviews-jsonld" type="application/ld+json"></script>
+    <!-- Server-rendered JSON-LD (baseline); client JS will update this node if fresher data is fetched -->
+    <script id="ac-reviews-jsonld" type="application/ld+json" is:inline set:html={reviewsJsonLd} />
   </div>
 </section>
 
 <style is:global>
   .ac-review-card {
     width: 20rem; min-width: 20rem; /* readable card width */
-    border-radius: 1rem;              /* rounded-2xl */
+    border-radius: 1rem;             /* rounded-2xl */
     background: #fff;
-    padding: 1.5rem;                  /* p-6 */
+    padding: 1.5rem;                 /* p-6 */
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     outline: 1px solid rgb(0 0 0 / 0.05); /* ring-1 ring-black/5 */
   }
@@ -58,6 +98,8 @@ const SPEED_PX_PER_SEC = 60; // marquee speed (lower = slower)
   const FN_BASE = root.getAttribute('data-fn-base') || '/api';
   const brand   = root.getAttribute('data-brand')    || 'Axis Cabs';
   const SPEED   = Number(root.getAttribute('data-speed')) || 60; // px/sec
+  const orgId   = root.getAttribute('data-org-id') || '';
+  const site    = root.getAttribute('data-site')    || (location.origin || '');
 
   const wrap   = document.getElementById('ac-marquee-wrap');
   const runner = document.getElementById('ac-marquee-runner');
@@ -107,17 +149,21 @@ const SPEED_PX_PER_SEC = 60; // marquee speed (lower = slower)
     `;
   };
 
+  // Overwrite JSON-LD with fresh data (keeps server baseline if fetch fails)
   const updateJsonLd = () => {
-    jsonLdEl.textContent = JSON.stringify({
+    const obj = {
       "@context": "https://schema.org",
-      "@type": "Product",
+      "@type": "TaxiService",
       "name": brand,
+      "url": site,
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": aggregate.average || 0,
         "reviewCount": aggregate.count || 0
       }
-    });
+    };
+    if (orgId) obj["@id"] = orgId;
+    jsonLdEl.textContent = JSON.stringify(obj);
   };
 
   async function safeJson(res) {
@@ -177,6 +223,8 @@ const SPEED_PX_PER_SEC = 60; // marquee speed (lower = slower)
 
     if (!items.length) {
       runner.innerHTML = '<p class="text-sm text-slate-500">No reviews yet. Be the first to share your experience!</p>';
+      // Still update JSON-LD so at least baseline renders
+      updateJsonLd();
       return;
     }
 
@@ -197,7 +245,7 @@ const SPEED_PX_PER_SEC = 60; // marquee speed (lower = slower)
     // Measure the width of one copy after it paints
     requestAnimationFrame(() => {
       copyWidth = one.getBoundingClientRect().width;
-      updateJsonLd();
+      updateJsonLd(); // client-side numbers overwrite server baseline
       // Start the loop
       cancelAnimationFrame(rafId);
       lastTs = 0;

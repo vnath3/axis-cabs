@@ -17,6 +17,9 @@ import Base from '@/layouts/Base.astro';
 import ReviewsSection from '@/components/ReviewsSection.astro';
 import FareCalcCard from '@/components/FareCalcCard.astro';
 import FareCalculatorModal from '@/components/FareCalculatorModal.astro';
+import DestinationsGrid from "@/components/DestinationsGrid.astro";
+import ReviewsSection from "@/components/ReviewsSection.astro";
+import { reviewsAggregate } from "@/data/reviews-aggregate";
 
 const brand = 'Axis Cabs';
 const site = 'https://axis-cabs.netlify.app';
@@ -43,13 +46,6 @@ const site = 'https://axis-cabs.netlify.app';
       "sameAs": [],
       "providerMobility": "Taxi",
       "serviceType": "Intercity cab, tour packages, airport transfers"
-    }} />
-
-    <JsonLd data={{
-      "@context":"https://schema.org",
-      "@type":"WebSite",
-      "name": brand,
-      "url": site
     }} />
 
     <Analytics />
@@ -93,6 +89,9 @@ const site = 'https://axis-cabs.netlify.app';
   <FareCalculatorModal />
 
   <StickyCTAs />
+  <!-- Destinations & Experiences -->
+    <DestinationsGrid mobileCarousel={true} />
   <ReviewsSection />
+  <ReviewsSection brand="Axis Cabs" aggregate={reviewsAggregate} />
   <Footer />
 </Base>
