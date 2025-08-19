@@ -1,10 +1,11 @@
 ---
 /**
  * FareCalculatorModal.astro
- * - From/To typeahead (min 1 char; Enter/Tab picks first)
+ * - Typeahead (1+ char) with Enter/Tab selection
  * - Vehicle as icon-radio buttons (Sedan/SUV/Luxury/Traveller)
- * - "Book Now" button (enabled after successful estimate)
- * - Inline Tabler-style SVGs (self-hosted; no dependency)
+ * - "Book Now" button (enabled after a successful estimate)
+ * - ARIA live region for results
+ * - GA events: fare_estimate_success / fare_estimate_error / fare_book_now
  */
 const defaultFrom = '';
 const defaultTo = '';
@@ -28,7 +29,7 @@ const defaultTo = '';
   .vehicle-card .inner {
     @apply flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm;
   }
-  .vehicle-card input { @apply sr-only; } /* no 'peer' to avoid Tailwind @apply error */
+  .vehicle-card input { @apply sr-only; }
   .vehicle-card .inner svg { @apply h-6 w-10; }
   .vehicle-card .inner span { @apply font-medium; }
   .vehicle-card input:checked + .inner {
@@ -51,12 +52,12 @@ const defaultTo = '';
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div class="ac-ta-wrap">
             <label class="ac-label">From</label>
-            <input name="from" id="fc-from" class="ac-input" value={defaultFrom} placeholder="Type a city…" />
+            <input name="from" id="fc-from" class="ac-input" value={defaultFrom} placeholder="Type a city…" aria-autocomplete="list" aria-controls="fc-from-list" aria-expanded="false" />
             <div id="fc-from-list" class="ac-ta-list hidden" role="listbox" aria-label="From city suggestions"></div>
           </div>
           <div class="ac-ta-wrap">
             <label class="ac-label">To</label>
-            <input name="to" id="fc-to" class="ac-input" value={defaultTo} placeholder="Type a city…" />
+            <input name="to" id="fc-to" class="ac-input" value={defaultTo} placeholder="Type a city…" aria-autocomplete="list" aria-controls="fc-to-list" aria-expanded="false" />
             <div id="fc-to-list" class="ac-ta-list hidden" role="listbox" aria-label="To city suggestions"></div>
           </div>
         </div>
@@ -69,17 +70,14 @@ const defaultTo = '';
             <label class="vehicle-card" aria-label="Sedan">
               <input type="radio" name="vehicle" value="sedan" checked />
               <div class="inner">
-                <!-- Tabler-like: car -->
-<!-- Tabler: car (side view) -->
-<svg viewBox="0 0 24 24" fill="none"
-     stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
-     aria-hidden="true">
-  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-  <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-  <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-  <path d="M5 17h-2v-6l2 -5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0h-6m-6 -6h15m-6 0v-5" />
-</svg>
-                <span>Hatch/Sedan</span>
+                <!-- Tabler: car -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                  <path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                  <path d="M5 17h-2v-6l2 -5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0h-6m-6 -6h15m-6 0v-5" />
+                </svg>
+                <span>Sedan</span>
               </div>
             </label>
 
@@ -87,7 +85,6 @@ const defaultTo = '';
             <label class="vehicle-card" aria-label="SUV">
               <input type="radio" name="vehicle" value="suv" />
               <div class="inner">
-                <!-- Tabler-like: car suv -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M3 13h18v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                   <path d="M3 13l2-5h8l4 3h4" />
@@ -101,7 +98,6 @@ const defaultTo = '';
             <label class="vehicle-card" aria-label="Luxury">
               <input type="radio" name="vehicle" value="luxury" />
               <div class="inner">
-                <!-- Tabler-like: limousine -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M2 13h20v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z" />
                   <path d="M2 13l2-3h10l4 3" />
@@ -116,7 +112,6 @@ const defaultTo = '';
             <label class="vehicle-card" aria-label="Traveller">
               <input type="radio" name="vehicle" value="traveller" />
               <div class="inner">
-                <!-- Tabler-like: van/bus -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <rect x="3" y="10" width="15" height="6" rx="2" />
                   <path d="M18 12h3a2 2 0 0 1 2 2v2h-5z" />
@@ -141,7 +136,7 @@ const defaultTo = '';
         </div>
 
         <!-- Result -->
-        <div id="farecalc-result" class="rounded-xl border border-gray-200 p-4">
+        <div id="farecalc-result" class="rounded-xl border border-gray-200 p-4" role="status" aria-live="polite">
           <div class="p">Enter cities and click “Get Estimate”.</div>
         </div>
 
@@ -158,11 +153,13 @@ const defaultTo = '';
   </div>
 </div>
 
-<script>
-  const root = document.getElementById('farecalc-modal');
-  const form = root.querySelector('#farecalc-form');
-  const result = root.querySelector('#farecalc-result');
-  const bookBtn = root.querySelector('#btn-book');
+<script hoist>
+  import { gaEvent } from '@/lib/ga';
+
+  const root = document.getElementById('farecalc-modal')!;
+  const form = root.querySelector<HTMLFormElement>('#farecalc-form')!;
+  const result = root.querySelector<HTMLDivElement>('#farecalc-result')!;
+  const bookBtn = root.querySelector<HTMLButtonElement>('#btn-book')!;
 
   const show = () => { root.classList.remove('hidden'); root.setAttribute('aria-hidden','false'); };
   const hide = () => { root.classList.add('hidden'); root.setAttribute('aria-hidden','true'); };
@@ -170,66 +167,79 @@ const defaultTo = '';
   root.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', hide));
   window.addEventListener('farecalc:open', show);
 
-  const rs = (n:number) => '₹ ' + n.toLocaleString('en-IN');
+  const rs = (n:number) => '₹ ' + Number(n||0).toLocaleString('en-IN');
 
-  // ---- Typeahead (min 1 char, Enter/Tab picks first) ----
-  const makeTA = (inputId:string, listId:string) => {
-    const $input = root.querySelector<HTMLInputElement>(inputId)!;
-    const $list  = root.querySelector<HTMLDivElement>(listId)!;
+  // ---- Typeahead: Enter/Tab selects first; also supports click; abort stale requests ----
+  type City = { city: string };
 
-    const closeList = () => { $list.innerHTML=''; $list.classList.add('hidden'); };
-    const openList = () => { $list.classList.remove('hidden'); };
+  function makeTA(input: HTMLInputElement, list: HTMLDivElement) {
+    let timer: number | null = null;
+    let ctr: AbortController | null = null;
 
-    const fetchCities = async (q:string) => {
-      const r = await fetch('/api/cities?q=' + encodeURIComponent(q), { cache: 'no-store' });
-      const j = await r.json();
-      return (j.ok && Array.isArray(j.items)) ? j.items as {city:string}[] : [];
-    };
+    const closeList = () => { list.innerHTML=''; list.classList.add('hidden'); input.setAttribute('aria-expanded','false'); };
+    const openList = () => { list.classList.remove('hidden'); input.setAttribute('aria-expanded','true'); };
 
-    const render = (items:{city:string}[]) => {
-      if (!items.length) { $list.innerHTML = `<div class="ac-ta-empty">No matches</div>`; openList(); return; }
-      $list.innerHTML = items.map(i => `<div class="ac-ta-item" data-city="${i.city}">${i.city}</div>`).join('');
+    const render = (rows: City[]) => {
+      if (!rows.length) {
+        list.innerHTML = `<div class="ac-ta-empty">No matches</div>`;
+        openList(); return;
+      }
+      list.innerHTML = rows.map((r) => `<div role="option" class="ac-ta-item" data-city="${r.city}">${r.city}</div>`).join('');
       openList();
     };
 
-    let timer:any=null;
-    $input.addEventListener('input', () => {
-      const q = $input.value.trim();
+    const fetchCities = async (q: string) => {
+      ctr?.abort(); ctr = new AbortController();
+      const r = await fetch('/api/cities?q=' + encodeURIComponent(q), { cache: 'no-store', signal: ctr.signal });
+      const j = await r.json().catch(() => ({ ok:false, items:[] }));
+      return (j.ok && Array.isArray(j.items)) ? (j.items as City[]) : [];
+    };
+
+    input.addEventListener('input', () => {
+      const q = input.value.trim();
       if (q.length < 1) { closeList(); return; }
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(async () => { render(await fetchCities(q)); }, 200);
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(async () => {
+        try {
+          const items = await fetchCities(q);
+          render(items);
+        } catch { /* aborted */ }
+      }, 150) as unknown as number;
     });
 
-    $list.addEventListener('click', (e) => {
+    // mouse select
+    list.addEventListener('click', (e) => {
       const el = (e.target as HTMLElement).closest('[data-city]') as HTMLElement | null;
       if (!el) return;
-      $input.value = el.dataset.city || '';
+      input.value = el.dataset.city || '';
       closeList();
-      $input.dispatchEvent(new Event('change'));
+      input.dispatchEvent(new Event('change'));
     });
 
-    $input.addEventListener('keydown', (e:KeyboardEvent) => {
-      if ((e.key === 'Enter' || e.key === 'Tab') && !$list.classList.contains('hidden')) {
-        const first = $list.querySelector<HTMLElement>('[data-city]');
+    // Enter/Tab selects first visible option (if any)
+    input.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === 'Tab') && !list.classList.contains('hidden')) {
+        const first = list.querySelector<HTMLElement>('[data-city]');
         if (first) {
           e.preventDefault();
-          $input.value = first.dataset.city || '';
+          input.value = first.getAttribute('data-city') || '';
           closeList();
-          $input.dispatchEvent(new Event('change'));
+          input.dispatchEvent(new Event('change'));
           if (e.key === 'Tab') (document.activeElement as HTMLElement)?.blur();
         }
       }
     });
 
     document.addEventListener('click', (e) => {
-      if (!$list.contains(e.target as Node) && !$input.contains(e.target as Node)) closeList();
+      if (!list.contains(e.target as Node) && !input.contains(e.target as Node)) closeList();
     });
-  };
-  makeTA('#fc-from', '#fc-from-list');
-  makeTA('#fc-to', '#fc-to-list');
+  }
+
+  makeTA(root.querySelector<HTMLInputElement>('#fc-from')!, root.querySelector<HTMLDivElement>('#fc-from-list')!);
+  makeTA(root.querySelector<HTMLInputElement>('#fc-to')!,   root.querySelector<HTMLDivElement>('#fc-to-list')!);
 
   // cache last quote payload for Book Now
-  let lastQuote:any = null;
+  let lastQuote: any = null;
 
   // ---- Estimate ----
   form.addEventListener('submit', async (e) => {
@@ -278,9 +288,22 @@ const defaultTo = '';
 
       bookBtn.removeAttribute('disabled'); bookBtn.setAttribute('aria-disabled','false');
       bookBtn.title = 'Proceed to booking';
-    } catch (err) {
+
+      gaEvent('fare_estimate_success', {
+        from: j.meta.from, to: j.meta.to, vehicle: j.meta.vehicle,
+        roundtrip: j.meta.roundtrip ? 1 : 0, km: dist.km,
+        low: fare.low, high: fare.high
+      });
+    } catch (err: any) {
       result.innerHTML = `<div class="text-sm text-red-600">Couldn’t calculate. Try a different route or check later.</div>`;
       bookBtn.setAttribute('disabled','true'); bookBtn.setAttribute('aria-disabled','true');
+
+      gaEvent('fare_estimate_error', {
+        from: String((form as any).from?.value || ''),
+        to: String((form as any).to?.value || ''),
+        vehicle: String((form as any).vehicle?.value || 'sedan').toLowerCase(),
+        message: String(err?.message || 'failed')
+      });
     }
   });
 
@@ -314,5 +337,11 @@ const defaultTo = '';
       });
       window.location.href = '/book?' + qs.toString();
     }
+
+    gaEvent('fare_book_now', {
+      from: payload.from, to: payload.to, vehicle: payload.vehicle,
+      roundtrip: payload.roundtrip ? 1 : 0, km: payload.km,
+      low: payload.estimate_low, high: payload.estimate_high
+    });
   });
 </script>
