@@ -10,7 +10,6 @@ const SUPABASE_URL = import.meta.env.SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE = import.meta.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, { auth: { persistSession: false } });
 
-/* ---- tiny in-file cache & rate-limit (per instance) ---- */
 type Stamp = number;
 const cache = new Map<string, { v: any; exp: number }>();
 const hits: Map<string, Stamp[]> = new Map();
@@ -62,25 +61,15 @@ export const GET: APIRoute = async ({ request, url }) => {
     });
   }
 
-  // 1) Load route distance from distance_matrix (try A->B then B->A)
+  // ---- CASE-INSENSITIVE route lookup (ilike) ----
+  // Try A->B, else B->A
   const { data: r1, error: e1 } = await supabase
     .from('distance_matrix')
     .select('from_city,to_city,km,toll_low,toll_high,highway_note')
-    .eq('from_city', from)
-    .eq('to_city', to)
+    .or(`and(from_city.ilike.${from},to_city.ilike.${to}),and(from_city.ilike.${to},to_city.ilike.${from})`)
     .limit(1);
 
-  let route = r1?.[0];
-  if (!route) {
-    const { data: r2 } = await supabase
-      .from('distance_matrix')
-      .select('from_city,to_city,km,toll_low,toll_high,highway_note')
-      .eq('from_city', to)
-      .eq('to_city', from)
-      .limit(1);
-    route = r2?.[0];
-  }
-
+  const route = r1?.[0];
   if (!route) {
     return new Response(JSON.stringify({ ok: false, error: 'route-not-found' }), {
       status: 404, headers: { 'content-type': 'application/json' },
@@ -90,7 +79,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   const kmOneWay = Number(route.km || 0);
   const kmBillable = Math.max(kmOneWay * (roundtrip ? 2 : 1), 0);
 
-  // 2) Load fare rule for vehicle (defaults if missing)
+  // fare rules
   const { data: fr } = await supabase
     .from('fare_rules')
     .select('vehicle_type,per_km,da_per_day,night_surcharge_pct,min_km')
@@ -106,9 +95,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   };
 
   const kmBillableWithMin = Math.max(kmBillable, rule.min_km);
-
   const base = Math.round(kmBillableWithMin * rule.per_km);
-  // DA heuristic: 1 day per ~300km
   const daDays = Math.max(1, Math.ceil(kmBillableWithMin / 300));
   const da = Math.round(daDays * rule.da_per_day);
   const night_fee = Math.round(base * (rule.night_surcharge_pct / 100));
