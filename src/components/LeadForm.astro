@@ -4,10 +4,11 @@
  * - Custom validation (no browser popups)
  * - Posts to /api/leads-submit
  * - Preserves GA events + WhatsApp handoff
+ * - Prefill from Fare Calculator ("booking:start" event + sessionStorage)
  */
 const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
 ---
-<form id="lead-form" class="card p-4 md:p-6" data-wa-num={WA_NUM} novalidate>
+<form id="lead-form" class="card p-4 md:p-6" data-wa-num={WA_NUM} data-lead-form novalidate>
   <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
     <input required name="from_city"  placeholder="From City" class="border rounded-xl px-4 py-3" />
     <input required name="to_city"    placeholder="To City"   class="border rounded-xl px-4 py-3" />
@@ -58,6 +59,7 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
       const btnSubmit = form.querySelector('#btn-submit');
       const msg = form.querySelector('#msg');
 
+      // FIXED: no backslashes around backticks here
       const q = (name) => form.querySelector(`[name="${name}"]`);
       const fields = {
         from: q('from_city'),
@@ -176,13 +178,61 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
         form.reset(); applyDateDefaults(); applyTimeDefaults();
       }
 
+      // =========================
+      // Prefill from Fare Calculator
+      // =========================
+      function buildQuoteNote(q) {
+        const trip = q?.roundtrip ? 'Round trip' : 'One-way';
+        const range = (q?.estimate_low && q?.estimate_high)
+          ? `₹ ${(q.estimate_low).toLocaleString('en-IN')} – ₹ ${(q.estimate_high).toLocaleString('en-IN')}`
+          : '';
+        const parts = [
+          '[From Fare Calculator]',
+          q?.from && q?.to ? `${q.from} → ${q.to}` : '',
+          q?.vehicle ? `${q.vehicle}` : '',
+          trip,
+          q?.km ? `${q.km} km` : '',
+          range
+        ].filter(Boolean);
+        return parts.join(' • ');
+      }
+      function prefillFromQuote(q) {
+        if (!q) return;
+        if (fields.from) fields.from.value = (q.from || '').toString();
+        if (fields.to)   fields.to.value   = (q.to || '').toString();
+        if (fields.notes) {
+          const noteLine = buildQuoteNote(q);
+          const current = (fields.notes.value || '').trim();
+          fields.notes.value = current ? (current + '\\n' + noteLine) : noteLine;
+        }
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (fields.name) fields.name.focus();
+      }
+
+      // 1) Apply session prefill once (if any)
+      try {
+        const stash = sessionStorage.getItem('axis_booking_prefill');
+        if (stash) {
+          const q = JSON.parse(stash);
+          prefillFromQuote(q);
+          sessionStorage.removeItem('axis_booking_prefill');
+        }
+      } catch {}
+
+      // 2) Live event from Fare Calculator
+      window.addEventListener('booking:start', (e) => {
+        try { prefillFromQuote(e.detail); } catch {}
+      });
+
+      // =========================
+      // Existing CTA handlers
+      // =========================
       btnWa.addEventListener('click', async () => {
         setMsg(''); setBusy(true);
         try {
           const err = validateFields(); if (err) throw new Error(err);
           await postToApi();
           gaEvent('whatsapp_click', { page: pagePath(), from_city: fields.from.value, to_city: fields.to.value });
-          // build WA text and redirect
           const t =
             `Ride request:%0AFrom: ${encodeURIComponent(fields.from.value)}` +
             `%0ATo: ${encodeURIComponent(fields.to.value)}` +
