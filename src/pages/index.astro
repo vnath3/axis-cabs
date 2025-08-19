@@ -18,10 +18,10 @@ import ReviewsSection from '@/components/ReviewsSection.astro';
 import FareCalcCard from '@/components/FareCalcCard.astro';
 import FareCalculatorModal from '@/components/FareCalculatorModal.astro';
 import DestinationsGrid from "@/components/DestinationsGrid.astro";
-import ReviewsSection from "@/components/ReviewsSection.astro";
 import { reviewsAggregate } from "@/data/reviews-aggregate";
 
 const brand = 'Axis Cabs';
+// Prefer Astro.site in production; using your current value for now:
 const site = 'https://axis-cabs.netlify.app';
 ---
 
@@ -89,9 +89,12 @@ const site = 'https://axis-cabs.netlify.app';
   <FareCalculatorModal />
 
   <StickyCTAs />
+
   <!-- Destinations & Experiences -->
-    <DestinationsGrid mobileCarousel={true} />
-  <ReviewsSection />
+  <DestinationsGrid mobileCarousel={true} />
+
+  <!-- Reviews (single instance with server-rendered aggregate) -->
   <ReviewsSection brand="Axis Cabs" aggregate={reviewsAggregate} />
+
   <Footer />
 </Base>
