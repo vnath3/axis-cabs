@@ -1,6 +1,6 @@
 @echo off
 REM Create directories
-mkdir public\ src\styles src\lib src\data src\components src\pages\city-to-city src\pages\packages src\pages\hidden-gems src\pages\api src\schemas
+mkdir public\ src\styles src\lib src\data src\components src\pages\city-to-city src\pages\packages src\pages\hidden-gems src\pages\api
 
 REM Create root files
 type nul > .env.example
@@ -44,5 +44,3 @@ type nul > src\pages\hidden-gems\[slug].astro
 type nul > src\pages\api\lead.ts
 type nul > src\pages\sitemap.xml.ts
 
-type nul > src\schemas\faq.ts
-type nul > src\schemas\jsonld.ts
