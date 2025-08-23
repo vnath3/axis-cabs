@@ -41,9 +41,13 @@ function formatINR(n: number) {
   </head>
   <body>
     <Header />
-    {dest && (
-      <section>
-        <img src={dest.image.src} alt={dest.image.alt} class="w-full h-64 md:h-96 object-cover" />
+    {entry.images.length > 0 && (
+      <section class="overflow-hidden">
+        <div class="flex overflow-x-auto snap-x snap-mandatory">
+          {entry.images.map(img => (
+            <img src={img.src} alt={img.alt} class="w-full h-64 md:h-96 object-cover flex-shrink-0 snap-center" />
+          ))}
+        </div>
       </section>
     )}
     <section class="max-w-6xl mx-auto px-4 py-6">
@@ -76,16 +80,30 @@ function formatINR(n: number) {
           <p class="text-sm mt-1 opacity-70">Inclusions: AC cab, fuel, driver allowance. Exclusions: entry tickets, meals, hotel.</p>
         </section>
         <section class="mt-6">
-          <h3 class="text-lg font-bold mb-3">Outline</h3>
+          <h3 class="text-lg font-bold mb-3">What you'll experience</h3>
           <div class="space-y-3">
             {entry.days.map((d) => (
-              <div class="card">
-                <strong>{d.day}</strong>
+              <details class="card">
+                <summary class="cursor-pointer font-semibold">{d.day}</summary>
                 <ul class="list-disc list-inside text-sm mt-2">
                   {d.items.map(i => <li>{i}</li>)}
                 </ul>
-              </div>
+              </details>
             ))}
+            <details class="card">
+              <summary class="cursor-pointer font-semibold">What's included?</summary>
+              <ul class="list-disc list-inside text-sm mt-2">
+                <li>AC cab with driver</li>
+                <li>Fuel &amp; tolls</li>
+              </ul>
+            </details>
+            <details class="card">
+              <summary class="cursor-pointer font-semibold">What's not included?</summary>
+              <ul class="list-disc list-inside text-sm mt-2">
+                <li>Entry tickets</li>
+                <li>Meals</li>
+              </ul>
+            </details>
           </div>
         </section>
         <section class="mt-6">
