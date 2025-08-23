@@ -1,0 +1,153 @@
+---
+/**
+ * /admin/leads — manage incoming leads
+ * Protected by ADMIN_TOKEN sent in header `x-admin-token`.
+ */
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Lead Management • Axis Cabs</title>
+    <link rel="icon" href="/favicon.svg">
+    <link rel="stylesheet" href="/styles/globals.css">
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <main class="mx-auto max-w-5xl p-4">
+      <h1 class="text-2xl font-bold">Lead Management</h1>
+      <p class="text-slate-600">Review and update lead status.</p>
+
+      <div class="mt-4 flex items-center gap-2">
+        <input id="adm-token" type="password" placeholder="Enter admin token"
+               class="w-full rounded-xl border border-slate-300 px-3 py-2">
+        <button id="adm-save" class="rounded-xl bg-slate-900 text-white px-4 py-2">Save</button>
+      </div>
+
+      <div class="mt-4">
+        <label class="text-sm">Filter:</label>
+        <select id="adm-status" class="rounded-xl border border-slate-300 px-2 py-2">
+          <option value="new" selected>New</option>
+          <option value="contacted">Contacted</option>
+          <option value="closed">Closed</option>
+        </select>
+        <button id="adm-refresh" class="ml-2 rounded-xl border border-slate-300 px-3 py-2">Refresh</button>
+        <button id="adm-prev" class="ml-2 rounded-xl border border-slate-300 px-3 py-2">Prev</button>
+        <button id="adm-next" class="ml-2 rounded-xl border border-slate-300 px-3 py-2">Next</button>
+      </div>
+
+      <div id="adm-list" class="mt-4 overflow-x-auto"></div>
+    </main>
+
+    <script is:inline type="module">
+    (() => {
+      const list = document.getElementById('adm-list');
+      const statusSel = document.getElementById('adm-status');
+      const tokenInput = document.getElementById('adm-token');
+      const saveBtn = document.getElementById('adm-save');
+      const refreshBtn = document.getElementById('adm-refresh');
+      const prevBtn = document.getElementById('adm-prev');
+      const nextBtn = document.getElementById('adm-next');
+      const KEY = 'ac_admin_token';
+      const STATUSES = ['new','contacted','closed'];
+      let page = 1;
+      const ERR = (msg) => { list.innerHTML = `<div class="text-rose-600">${msg}</div>`; };
+
+      tokenInput.value = localStorage.getItem(KEY) || '';
+
+      saveBtn.addEventListener('click', () => {
+        localStorage.setItem(KEY, tokenInput.value.trim());
+        alert('Saved token');
+        page = 1;
+        fetchList();
+      });
+
+      tokenInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          saveBtn.click();
+        }
+      });
+
+      async function fetchList() {
+        list.innerHTML = 'Loading...';
+        const token = localStorage.getItem(KEY) || tokenInput.value.trim();
+        if (!token) { list.innerHTML = 'Enter token first.'; return; }
+        const res = await fetch(`/api/leads-admin?status=${encodeURIComponent(statusSel.value)}&page=${page}`, {
+          headers: { 'x-admin-token': token }
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.ok) return ERR(res.status === 401 ? 'Bad or missing token.' : data?.error || 'Server error.');
+        list.innerHTML = '';
+        if (!data.items.length) { list.innerHTML = '<div>No leads found.</div>'; }
+        const table = document.createElement('table');
+        table.className = 'min-w-full text-sm';
+        table.innerHTML = `
+          <thead>
+            <tr class="text-left">
+              <th class="px-2 py-1">Name</th>
+              <th class="px-2 py-1">Phone</th>
+              <th class="px-2 py-1">Route</th>
+              <th class="px-2 py-1">When</th>
+              <th class="px-2 py-1">Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>`;
+        const tbody = table.querySelector('tbody');
+        data.items.forEach((item) => {
+          const tr = document.createElement('tr');
+          const route = [item.from_city, item.to_city].filter(Boolean).join(' → ');
+          const when = [item.date, item.time].filter(Boolean).join(' ');
+          tr.innerHTML = `
+            <td class="border-t px-2 py-1">${item.name || ''}</td>
+            <td class="border-t px-2 py-1">${item.whatsapp || ''}</td>
+            <td class="border-t px-2 py-1">${route}</td>
+            <td class="border-t px-2 py-1">${when}</td>
+            <td class="border-t px-2 py-1">
+              <select data-id="${item.id}" class="status-select rounded border border-slate-300 px-2 py-1">
+                ${STATUSES.map(s => `<option value="${s}" ${s === item.status ? 'selected' : ''}>${s}</option>`).join('')}
+              </select>
+            </td>`;
+          tbody.appendChild(tr);
+        });
+        list.appendChild(table);
+        prevBtn.disabled = page <= 1;
+        const maxPage = Math.ceil((data.total || 0) / (data.pageSize || data.items.length || 1));
+        nextBtn.disabled = page >= maxPage;
+      }
+
+      list.addEventListener('change', async (e) => {
+        const sel = e.target.closest('select.status-select');
+        if (!sel) return;
+        const id = sel.dataset.id;
+        const status = sel.value;
+        const token = localStorage.getItem(KEY) || tokenInput.value.trim();
+        if (!token) return alert('Enter token first');
+        sel.disabled = true;
+        const res = await fetch('/api/leads-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': token
+          },
+          body: JSON.stringify({ id, status })
+        });
+        const data = await res.json();
+        sel.disabled = false;
+        if (!res.ok || !data?.ok) {
+          alert(data?.error || 'Update failed');
+          fetchList();
+        }
+      });
+
+      refreshBtn.addEventListener('click', () => { page = 1; fetchList(); });
+      statusSel.addEventListener('change', () => { page = 1; fetchList(); });
+      prevBtn.addEventListener('click', () => { if (page > 1) { page--; fetchList(); } });
+      nextBtn.addEventListener('click', () => { page++; fetchList(); });
+
+      fetchList();
+    })();
+    </script>
+  </body>
+</html>
