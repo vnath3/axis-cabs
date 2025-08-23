@@ -74,13 +74,15 @@ export const GET: APIRoute = async ({ request }) => {
       .from("reviews")
       .select("count(*), average:avg(rating)")
       .eq("status", "approved")
-      .single();
+      .maybeSingle();
 
     if (aggErr) return json({ ok: false, error: aggErr.message }, 500);
 
-    const totalCount = aggregate?.count ? Number(aggregate.count) : 0;
+    const { count: rawCount, average: rawAvg } =
+      aggregate ?? { count: 0, average: 0 };
+    const totalCount = rawCount ? Number(rawCount) : 0;
     const average = totalCount
-      ? Number(Number(aggregate.average || 0).toFixed(2))
+      ? Number(Number(rawAvg || 0).toFixed(2))
       : 0;
 
     const hasMore =
