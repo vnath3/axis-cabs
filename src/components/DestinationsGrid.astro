@@ -17,12 +17,14 @@ interface Props {
   items?: DestinationItem[];
   mobileCarousel?: boolean;
   heading?: string;
+  showHeader?: boolean;
 }
 
 const {
   items = defaultItems,
   mobileCarousel = true,
-  heading = "Destinations & Experiences"
+  heading = "Destinations & Experiences",
+  showHeader = true
 } = Astro.props;
 
 const WA = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || "+919922333305").replace(/\D/g, "");
@@ -118,12 +120,14 @@ const jsonLd2 = JSON.stringify(jsonLdAggregate);
 
 <section aria-labelledby="destinations-heading" class="py-12 sm:py-16 bg-white">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <header class="mb-6 sm:mb-10 text-center">
-      <h2 id="destinations-heading" class="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900">
-        {heading}
-      </h2>
-      <p class="mt-2 text-gray-600">Curated trips with cab, stay &amp; tickets—just book and go.</p>
-    </header>
+    {showHeader && (
+      <header class="mb-6 sm:mb-10 text-center">
+        <h2 id="destinations-heading" class="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900">
+          {heading}
+        </h2>
+        <p class="mt-2 text-gray-600">Curated trips with cab, stay &amp; tickets—just book and go.</p>
+      </header>
+    )}
 
     <!-- Mobile carousel wrapper (optional) -->
     <div class:list={[
@@ -141,6 +145,8 @@ const jsonLd2 = JSON.stringify(jsonLdAggregate);
           ]}
           tabindex="-1"
           aria-label={item.title}
+          data-title={item.title.toLowerCase()}
+          data-tags={(item.tags || []).map(t => t.toLowerCase()).join(',')}
         >
           <a href={item.slug} class="block rounded-t-2xl overflow-hidden">
             <img
