@@ -70,7 +70,12 @@ export const POST: APIRoute = async ({ request }) => {
     return json(400, { ok: false, error: 'Use application/json' });
   }
 
-  const body = (await request.json()) as Record<string, any>;
+  let body: Record<string, any>;
+  try {
+    body = (await request.json()) as Record<string, any>;
+  } catch {
+    return json(400, { ok: false, error: 'Invalid JSON' });
+  }
 
   // honeypot: "company" (if filled, accept silently)
   if (typeof body.company === 'string' && body.company.trim() !== '') {
