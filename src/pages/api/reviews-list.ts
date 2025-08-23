@@ -1,5 +1,5 @@
-import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
+import type { APIRoute } from "astro";
+import { createClient } from "@supabase/supabase-js";
 
 export const prerender = false;
 
@@ -7,13 +7,14 @@ function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store'
-    }
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
   });
 }
 
-const SUPABASE_URL = import.meta.env.SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SUPABASE_URL =
+  import.meta.env.SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
@@ -26,33 +27,40 @@ function sb() {
 export const GET: APIRoute = async ({ request }) => {
   try {
     const url = new URL(request.url);
-    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
-    const pageSize = Math.min(24, Math.max(1, parseInt(url.searchParams.get('pageSize') || '6', 10)));
+    const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
+    const pageSize = Math.min(
+      24,
+      Math.max(1, parseInt(url.searchParams.get("pageSize") || "6", 10)),
+    );
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
     const client = sb();
-    if (!client) return json({ ok: false, error: 'Server not configured (Supabase)' }, 500);
+    if (!client)
+      return json(
+        { ok: false, error: "Server not configured (Supabase)" },
+        500,
+      );
 
     // Try with "comment" column first
-    let selectCols = 'id, created_at, rating, comment, name, city';
+    let selectCols = "id, created_at, rating, comment, name, city";
     let query = client
-      .from('reviews')
-      .select(selectCols, { count: 'exact' })
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
+      .from("reviews")
+      .select(selectCols, { count: "exact" })
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
       .range(from, to);
 
     let { data: items, error, count } = await query;
 
     // If "comment" doesn't exist, alias review_text as comment
     if (error && /column "comment"|does not exist/i.test(error.message)) {
-      selectCols = 'id, created_at, rating, comment:review_text, name, city';
+      selectCols = "id, created_at, rating, comment:review_text, name, city";
       const retry = await client
-        .from('reviews')
-        .select(selectCols, { count: 'exact' })
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
+        .from("reviews")
+        .select(selectCols, { count: "exact" })
+        .eq("status", "approved")
+        .order("created_at", { ascending: false })
         .range(from, to);
       items = retry.data || [];
       error = retry.error || null;
@@ -61,27 +69,32 @@ export const GET: APIRoute = async ({ request }) => {
 
     if (error) return json({ ok: false, error: error.message }, 500);
 
-    // Aggregate average (kept simple; could be optimized with a view/RPC)
-    const { data: ratings, error: avgErr } = await client
-      .from('reviews')
-      .select('rating')
-      .eq('status', 'approved');
+    // Aggregate count and average rating without scanning the table
+    const { data: aggregate, error: aggErr } = await client
+      .from("reviews")
+      .select("count:count(id), average:avg(rating)")
+      .eq("status", "approved")
+      .single();
 
-    if (avgErr) return json({ ok: false, error: avgErr.message }, 500);
+    if (aggErr) return json({ ok: false, error: aggErr.message }, 500);
 
-    const total = ratings?.length || 0;
-    const sum = (ratings || []).reduce((acc, r: any) => acc + (Number(r.rating) || 0), 0);
-    const average = total ? Number((sum / total).toFixed(2)) : 0;
+    const total = aggregate?.count ? Number(aggregate.count) : 0;
+    const average = total
+      ? Number(Number(aggregate?.average || 0).toFixed(2))
+      : 0;
 
-    const hasMore = count != null ? to + 1 < (count as number) : (items?.length || 0) === pageSize;
+    const hasMore =
+      count != null
+        ? to + 1 < (count as number)
+        : (items?.length || 0) === pageSize;
 
     return json({
       ok: true,
       items: items || [],
       hasMore,
-      aggregate: { count: total, average }
+      aggregate: { count: total, average },
     });
   } catch (err: any) {
-    return json({ ok: false, error: err?.message || 'Server error' }, 500);
+    return json({ ok: false, error: err?.message || "Server error" }, 500);
   }
 };
