@@ -16,6 +16,13 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
     <input required name="date" type="date" class="border rounded-xl px-4 py-3" />
     <input required name="time" type="time" step="900" class="border rounded-xl px-4 py-3" />
 
+    <select required name="vehicle" class="border rounded-xl px-4 py-3">
+      <option value="sedan">Sedan</option>
+      <option value="suv">SUV</option>
+      <option value="luxury">Luxury</option>
+      <option value="traveller">Traveller</option>
+    </select>
+
     <input required name="pax"  inputmode="numeric" type="text" minlength="1" maxlength="2"
            placeholder="Passengers" class="border rounded-xl px-4 py-3" />
     <input name="bags" inputmode="numeric" type="text" minlength="1" maxlength="2"
@@ -66,6 +73,7 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
         to: q('to_city'),
         date: q('date'),
         time: q('time'),
+        vehicle: q('vehicle'),
         pax: q('pax'),
         bags: q('bags'),
         name: q('name'),
@@ -151,7 +159,7 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
       function validateFields() {
         const fd = new FormData(form);
         const get = (k) => String(fd.get(k) || '').trim();
-        const req = ['from_city','to_city','date','time','pax','name','whatsapp'];
+        const req = ['from_city','to_city','date','time','vehicle','pax','name','whatsapp'];
         for (const k of req) if (!get(k)) return `Please fill “${k.replace('_',' ')}”.`;
         if (!/^[0-9]{10}$/.test(get('whatsapp'))) return 'Enter a valid 10-digit WhatsApp number.';
         const pax = parseInt(get('pax'), 10); if (!(pax >= 1 && pax <= 12)) return 'Passengers must be between 1 and 12.';
@@ -200,6 +208,7 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
         if (!q) return;
         if (fields.from) fields.from.value = (q.from || '').toString();
         if (fields.to)   fields.to.value   = (q.to || '').toString();
+        if (fields.vehicle && q.vehicle) fields.vehicle.value = (q.vehicle || '').toString();
         if (fields.notes) {
           const noteLine = buildQuoteNote(q);
           const current = (fields.notes.value || '').trim();
@@ -236,6 +245,7 @@ const WA_NUM = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').repla
           const t =
             `Ride request:%0AFrom: ${encodeURIComponent(fields.from.value)}` +
             `%0ATo: ${encodeURIComponent(fields.to.value)}` +
+            `%0AVehicle: ${encodeURIComponent(fields.vehicle.value)}` +
             `%0ADate/Time: ${encodeURIComponent(fields.date.value)} ${encodeURIComponent(fields.time.value)}` +
             `%0APax/Bags: ${encodeURIComponent(fields.pax.value)}/${encodeURIComponent(fields.bags.value || '0')}` +
             `%0ANotes: ${encodeURIComponent(fields.notes.value || '')}`;
