@@ -99,7 +99,7 @@
         data.items.forEach((item) => {
           const tr = document.createElement('tr');
           const route = [item.from_city, item.to_city].filter(Boolean).join(' → ');
-          const vehicle = item.vehicle || '';
+          const vehicle = item.vehicle || '—';
           const when = [item.date, item.time].filter(Boolean).join(' ');
           tr.innerHTML = `
             <td class="border-t px-2 py-1">${item.name || ''}</td>
