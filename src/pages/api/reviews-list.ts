@@ -88,6 +88,7 @@ export const GET: APIRoute = async ({ request }) => {
         ? Number(Number(aggregate.avg).toFixed(2))
         : 0;
 
+
     const hasMore =
       count != null
         ? to + 1 < (count as number)
