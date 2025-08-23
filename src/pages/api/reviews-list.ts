@@ -72,7 +72,7 @@ export const GET: APIRoute = async ({ request }) => {
     // Aggregate average rating and total count without schema cache issues
     const { data: aggregate, error: aggErr } = await client
       .from("reviews")
-      .select("count:count(id), average:avg(rating)")
+      .select("count(*), average:avg(rating)")
       .eq("status", "approved")
       .single();
 
@@ -82,7 +82,6 @@ export const GET: APIRoute = async ({ request }) => {
     const average = totalCount
       ? Number(Number(aggregate.average || 0).toFixed(2))
       : 0;
-
 
     const hasMore =
       count != null
