@@ -12,7 +12,7 @@ const store = new Map<string, Entry<any>>();
 export function cacheGet<T = unknown>(key: string): T | undefined {
 const hit = store.get(key);
 if (!hit) return undefined;
-  if (Date.now() > hit.exp) {
+  if (Date.now() >= hit.exp) {
     store.delete(key);
     return undefined;
   }
