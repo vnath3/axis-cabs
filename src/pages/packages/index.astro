@@ -1,0 +1,68 @@
+---
+import '../../styles/globals.css';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+import DestinationsGrid from '@/components/DestinationsGrid.astro';
+import { destinations } from '@/data/destinations';
+
+const allPackages = destinations.filter(d => d.slug.startsWith('/packages/'));
+const tags = Array.from(new Set(allPackages.flatMap(p => p.tags || []))).sort();
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Packages | Axis Cabs</title>
+    <meta name="description" content="Browse all tour packages offered by Axis Cabs" />
+    <link rel="icon" href="/favicon.svg" />
+  </head>
+  <body>
+    <Header />
+    <main class="py-10">
+      <div class="max-w-6xl mx-auto px-4">
+        <h1 class="text-3xl font-bold mb-4">Packages</h1>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <input id="pkg-search" type="search" placeholder="Where do you want to go?" class="border rounded-xl px-4 py-2 w-full sm:w-72" />
+          <div id="pkg-tags" class="flex flex-wrap gap-2">
+            {tags.map(t => (
+              <button type="button" class="px-3 py-1 rounded-full border text-sm" data-filter-tag={t.toLowerCase()}>{t}</button>
+            ))}
+          </div>
+        </div>
+        <div id="packages-grid">
+          <DestinationsGrid items={allPackages} mobileCarousel={false} showHeader={false} />
+        </div>
+      </div>
+    </main>
+    <Footer />
+    <script>
+      const search = document.getElementById('pkg-search');
+      const cards = Array.from(document.querySelectorAll('#packages-grid article'));
+      const buttons = Array.from(document.querySelectorAll('[data-filter-tag]'));
+      function applyFilters() {
+        const q = (search.value || '').toLowerCase();
+        const activeBtn = document.querySelector('[data-filter-tag].active');
+        const active = activeBtn ? activeBtn.dataset.filterTag : null;
+        cards.forEach(card => {
+          const title = (card.dataset.title || '').toLowerCase();
+          const tags = (card.dataset.tags || '').split(',');
+          const matchesQ = title.includes(q);
+          const matchesTag = !active || tags.includes(active);
+          card.classList.toggle('hidden', !(matchesQ && matchesTag));
+        });
+      }
+      search.addEventListener('input', applyFilters);
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.classList.contains('active')) {
+            btn.classList.remove('active','bg-orange-600','text-white');
+          } else {
+            buttons.forEach(b => b.classList.remove('active','bg-orange-600','text-white'));
+            btn.classList.add('active','bg-orange-600','text-white');
+          }
+          applyFilters();
+        });
+      });
+    </script>
+  </body>
+</html>
