@@ -62,14 +62,24 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   // ---- CASE-INSENSITIVE route lookup (ilike) ----
-  // Try A->B, else B->A
-  const { data: r1, error: e1 } = await supabase
-    .from('distance_matrix')
-    .select('from_city,to_city,km,toll_low,toll_high,highway_note')
-    .or(`and(from_city.ilike.${from},to_city.ilike.${to}),and(from_city.ilike.${to},to_city.ilike.${from})`)
-    .limit(1);
+  // Perform two parameterized queries: first A->B, then B->A.
+  // Combine results and keep the first match to preserve existing behavior.
+  const [ab, ba] = await Promise.all([
+    supabase
+      .from('distance_matrix')
+      .select('from_city,to_city,km,toll_low,toll_high,highway_note')
+      .ilike('from_city', from)
+      .ilike('to_city', to)
+      .limit(1),
+    supabase
+      .from('distance_matrix')
+      .select('from_city,to_city,km,toll_low,toll_high,highway_note')
+      .ilike('from_city', to)
+      .ilike('to_city', from)
+      .limit(1),
+  ]);
 
-  const route = r1?.[0];
+  const route = [...(ab.data ?? []), ...(ba.data ?? [])][0];
   if (!route) {
     return new Response(JSON.stringify({ ok: false, error: 'route-not-found' }), {
       status: 404, headers: { 'content-type': 'application/json' },
