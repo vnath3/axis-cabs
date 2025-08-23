@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ request }) => {
   let { data, error, count } = await supabase
     .from("leads")
     .select(
-      "id,created_at,name,whatsapp,from_city,to_city,date,time,status,notes",
+      "id,created_at,name,whatsapp,from_city,to_city,date,time,vehicle,status,notes",
       { count: "exact" },
     )
     .eq("status", status)
