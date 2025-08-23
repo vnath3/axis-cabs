@@ -174,19 +174,25 @@ const reviewsJsonLd = aggregate
   async function fetchAllReviews() {
     const pageSize = 24;
     let page = 1, all = [], more = true;
-    while (more && page <= 20) {
-      const url = new URL(`${FN_BASE}/reviews-list`, location.origin);
-      url.searchParams.set('page', String(page));
-      url.searchParams.set('pageSize', String(pageSize));
-      const res  = await fetch(url.toString(), { headers: { accept: 'application/json' } });
-      const data = await safeJson(res);
-      if (!res.ok || !data?.ok) break;
-      aggregate = data.aggregate || aggregate;
-      all  = all.concat(Array.isArray(data.items) ? data.items : []);
-      more = !!data.hasMore;
-      page += 1;
+    try {
+      while (more && page <= 20) {
+        const url = new URL(`${FN_BASE}/reviews-list`, location.origin);
+        url.searchParams.set('page', String(page));
+        url.searchParams.set('pageSize', String(pageSize));
+        const res  = await fetch(url.toString(), { headers: { accept: 'application/json' } });
+        const data = await safeJson(res);
+        if (!res.ok || !data?.ok) break;
+        aggregate = data.aggregate || aggregate;
+        all  = all.concat(Array.isArray(data.items) ? data.items : []);
+        more = !!data.hasMore;
+        page += 1;
+      }
+      return all;
+    } catch (err) {
+      console.error(err);
+      runner.innerHTML = '<p class="text-sm text-slate-500">Unable to load reviews right now.</p>';
+      return null;
     }
-    return all;
   }
 
   // --- RAF marquee ---
@@ -221,8 +227,10 @@ const reviewsJsonLd = aggregate
   (async () => {
     const items = await fetchAllReviews();
 
-    if (!items.length) {
-      runner.innerHTML = '<p class="text-sm text-slate-500">No reviews yet. Be the first to share your experience!</p>';
+    if (!items || !items.length) {
+      if (!runner.innerHTML) {
+        runner.innerHTML = '<p class="text-sm text-slate-500">No reviews yet. Be the first to share your experience!</p>';
+      }
       // Still update JSON-LD so at least baseline renders
       updateJsonLd();
       return;
