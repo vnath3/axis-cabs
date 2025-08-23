@@ -69,19 +69,24 @@ export const GET: APIRoute = async ({ request }) => {
 
     if (error) return json({ ok: false, error: error.message }, 500);
 
-    // Aggregate count and average rating without scanning the table
-    const { data: aggregate, error: aggErr } = await client
+    // Aggregate average rating and row count in a single query
+    const {
+      data: aggregate,
+      error: aggErr,
+      count: total,
+    } = await client
       .from("reviews")
-      .select("count:count(id), average:avg(rating)")
+      .select("avg(rating)", { count: "exact" })
       .eq("status", "approved")
       .single();
 
     if (aggErr) return json({ ok: false, error: aggErr.message }, 500);
 
-    const total = aggregate?.count ? Number(aggregate.count) : 0;
-    const average = total
-      ? Number(Number(aggregate?.average || 0).toFixed(2))
-      : 0;
+    const totalCount = total || 0;
+    const average =
+      totalCount && aggregate?.avg != null
+        ? Number(Number(aggregate.avg).toFixed(2))
+        : 0;
 
     const hasMore =
       count != null
@@ -92,7 +97,7 @@ export const GET: APIRoute = async ({ request }) => {
       ok: true,
       items: items || [],
       hasMore,
-      aggregate: { count: total, average },
+      aggregate: { count: totalCount, average },
     });
   } catch (err: any) {
     return json({ ok: false, error: err?.message || "Server error" }, 500);
