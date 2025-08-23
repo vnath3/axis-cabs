@@ -78,7 +78,7 @@ export const GET: APIRoute = async ({ request }) => {
       .from("reviews")
       .select("avg(rating)", { count: "exact" })
       .eq("status", "approved")
-      .single();
+      .maybeSingle();
 
     if (aggErr) return json({ ok: false, error: aggErr.message }, 500);
 
