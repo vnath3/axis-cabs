@@ -10,9 +10,9 @@ type Entry<V> = { v: V; exp: number };
 const store = new Map<string, Entry<any>>();
 
 export function cacheGet<T = unknown>(key: string): T | undefined {
-const hit = store.get(key);
-if (!hit) return undefined;
-  if (Date.now() > hit.exp) {
+  const hit = store.get(key);
+  if (!hit) return undefined;
+  if (Date.now() >= hit.exp) {
     store.delete(key);
     return undefined;
   }
@@ -26,3 +26,4 @@ export function cacheSet<T = unknown>(key: string, value: T, ttlMs = 60_000): vo
 /** Optional: delete / clear */
 export const cacheDel = (key: string) => { store.delete(key); };
 export const cacheClear = () => { store.clear(); };
+
