@@ -15,19 +15,19 @@ export const packages: PackageEntry[] = [
     summary: "Private cab • Handpicked stops • Flexible timing",
     images: [
       {
-        src: "https://source.unsplash.com/featured/?ajanta,caves",
+        src: "/images/destinations/ajanta-ellora.jpg",
         alt: "Ajanta caves",
         story:
           "Centuries-old Buddhist murals adorn the silent halls of Ajanta.",
       },
       {
-        src: "https://source.unsplash.com/featured/?ellora,temple",
+        src: "/images/destinations/ellora.jpg",
         alt: "Ellora temple",
         story:
           "The monolithic Kailasa temple shows the scale of ancient craftsmanship.",
       },
       {
-        src: "https://source.unsplash.com/featured/?daulatabad,fort",
+        src: "/images/destinations/daulatabad_fort.jpg",
         alt: "Daulatabad Fort",
         story: "Climb Daulatabad's steep ramps for sweeping Deccan views.",
       },
@@ -79,13 +79,13 @@ export const packages: PackageEntry[] = [
     summary: "Private cab • Darshan assistance • Same day return",
     images: [
       {
-        src: "https://source.unsplash.com/featured/?shirdi,temple",
+        src: "/images/destinations/shirdi.jpg",
         alt: "Shirdi temple",
         story:
           "Early morning aarti at the Sai Baba temple draws thousands of devotees.",
       },
       {
-        src: "https://source.unsplash.com/featured/?shirdi,market",
+        src: "/images/destinations/ShirdiSaibaba.jpg",
         alt: "Shirdi market",
         story: "Colourful shops around the temple sell prasad and souvenirs.",
       },
@@ -135,19 +135,19 @@ export const packages: PackageEntry[] = [
       "Airport transfers • North & South Goa tours • Optional watersports",
     images: [
       {
-        src: "https://source.unsplash.com/featured/?goa,beach",
+        src: "/images/destinations/goa1.jpg",
         alt: "Goa beach",
         story:
           "Relax on soft sands with gentle Arabian Sea waves lapping nearby.",
       },
       {
-        src: "https://source.unsplash.com/featured/?goa,fort",
+        src: "/images/destinations/goa_fort.jpg",
         alt: "Goa fort",
         story:
           "Explore centuries-old coastal forts overlooking turquoise waters.",
       },
       {
-        src: "https://source.unsplash.com/featured/?goa,sunset",
+        src: "/images/destinations/goa2.jpg",
         alt: "Goa sunset",
         story: "Evenings end with vivid orange sunsets across the horizon.",
       },
@@ -197,12 +197,12 @@ export const packages: PackageEntry[] = [
     summary: "Scenic viewpoints • Mapro Garden • Flexible schedule",
     images: [
       {
-        src: "https://source.unsplash.com/featured/?mahabaleshwar,hills",
+        src: "/images/destinations/mahabaleshwar.jpg",
         alt: "Mahabaleshwar hills",
         story: "Morning mist rolls over the lush hills of Mahabaleshwar.",
       },
       {
-        src: "https://source.unsplash.com/featured/?mahabaleshwar,strawberry",
+        src: "/images/destinations/mapro.jpg",
         alt: "Mapro Garden",
         story: "Sample fresh strawberry treats at the famous Mapro Garden.",
       },
@@ -247,18 +247,18 @@ export const packages: PackageEntry[] = [
     summary: "Private cab • Guided sightseeing • Customisable plan",
     images: [
       {
-        src: "https://source.unsplash.com/featured/?agra,tajmahal",
+        src: "/images/destinations/taj.jpg",
         alt: "Taj Mahal",
         story:
           "Sunrise at the Taj Mahal is a highlight of the Golden Triangle.",
       },
       {
-        src: "https://source.unsplash.com/featured/?delhi,indiagate",
+        src: "/images/destinations/india_gate.jpg",
         alt: "India Gate",
         story: "Drive past Delhi's iconic India Gate on your city tour.",
       },
       {
-        src: "https://source.unsplash.com/featured/?jaipur,fort",
+        src: "/images/destinations/jaipur.jpg",
         alt: "Jaipur fort",
         story: "The pink city of Jaipur boasts majestic forts and palaces.",
       },
