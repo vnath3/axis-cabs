@@ -7,7 +7,7 @@ export const GET: APIRoute = () => {
 'Allow: /',
 '',
 'Sitemap: https://axiscabs.com/sitemap.xml',
-    ''
+''
 ].join('\n');
 
 return new Response(body, {
