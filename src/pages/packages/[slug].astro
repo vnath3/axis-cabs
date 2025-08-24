@@ -107,12 +107,12 @@ function formatINR(n: number) {
           <h3 class="text-lg font-bold mb-3">What you'll experience</h3>
           <div class="space-y-3">
             {entry.days.map((d) => (
-              <details class="card">
-                <summary class="cursor-pointer font-semibold">{d.day}</summary>
+              <div class="card">
+                <h4 class="font-semibold">{d.day}</h4>
                 <ul class="list-disc list-inside text-sm mt-2">
                   {d.items.map(i => <li>{i}</li>)}
                 </ul>
-              </details>
+              </div>
             ))}
             <details class="card">
               <summary class="cursor-pointer font-semibold">What's included?</summary>
@@ -156,6 +156,34 @@ function formatINR(n: number) {
         )}
       </div>
       <aside class="space-y-4">
+        <div class="card p-4 space-y-4">
+          {dest && (
+            <div>
+              <p class="text-2xl font-bold">{formatINR(dest.priceFromINR)}</p>
+              <p class="text-sm opacity-70">{dest.duration}</p>
+            </div>
+          )}
+          <div>
+            <label for="vehicle" class="text-sm font-semibold">Vehicle</label>
+            <select id="vehicle" class="mt-1 w-full border rounded px-2 py-1">
+              <option value="sedan">Sedan (1–4) — {formatINR(band?.sedan_band?.[0] ?? dest?.priceFromINR ?? 0)}</option>
+              <option value="suv">SUV (1–6) — {formatINR(band?.suv_band?.[0] ?? dest?.priceFromINR ?? 0)}</option>
+            </select>
+          </div>
+          <div>
+            <p class="text-sm font-semibold">Add-ons</p>
+            <div class="mt-2 space-y-1">
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" />Certified Guide (English/Hindi) {formatINR(1200)}</label>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" />Premium Hotel Upgrade {formatINR(4200)}</label>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" />Local Food Tasting {formatINR(1200)}</label>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2">
+            <a href={waHref} class="btn-primary w-full">WhatsApp Quote</a>
+            <button class="border border-primary text-primary rounded-xl px-5 py-3 font-semibold w-full">Book Now</button>
+          </div>
+          <p class="text-xs text-center opacity-70">Transparent fares • 24×7 support</p>
+        </div>
         <div class="card"><strong>Why Axis Cabs?</strong><p class="text-sm mt-2 opacity-80">Local expertise • Flexible timing • Premium support</p></div>
       </aside>
     </main>
