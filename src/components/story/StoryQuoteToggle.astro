@@ -1,0 +1,49 @@
+---
+import StoryTemplateSwitcher from './StoryTemplateSwitcher.astro';
+import QuoteOverlay from './QuoteOverlay.astro';
+
+interface QuoteData {
+  image: { src: string; alt: string };
+  quote: string;
+  attribution: string;
+}
+
+interface Props {
+  story: {
+    type: 'editorial-split';
+    image: { src: string; alt: string };
+    blocks: { title?: string; body: string }[];
+  };
+  quote: QuoteData;
+}
+
+const { story, quote } = Astro.props as Props;
+---
+<div>
+  <div class="flex gap-2 mb-4">
+    <button id="story-view-btn" class="px-3 py-1 text-sm border rounded" type="button">Story</button>
+    <button id="quote-view-btn" class="px-3 py-1 text-sm border rounded" type="button">Quote</button>
+  </div>
+  <div id="story-view">
+    <StoryTemplateSwitcher data={story} />
+  </div>
+  <div id="quote-view" class="hidden">
+    <QuoteOverlay image={quote.image} quote={quote.quote} attribution={quote.attribution} />
+  </div>
+</div>
+<script is:inline>
+  {`(() => {
+    const storyBtn = document.getElementById('story-view-btn');
+    const quoteBtn = document.getElementById('quote-view-btn');
+    const storyView = document.getElementById('story-view');
+    const quoteView = document.getElementById('quote-view');
+    storyBtn?.addEventListener('click', () => {
+      storyView?.classList.remove('hidden');
+      quoteView?.classList.add('hidden');
+    });
+    quoteBtn?.addEventListener('click', () => {
+      quoteView?.classList.remove('hidden');
+      storyView?.classList.add('hidden');
+    });
+  })();`}
+</script>
