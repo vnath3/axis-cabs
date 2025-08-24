@@ -137,10 +137,12 @@ function formatINR(n: number) {
         </section>
         {entry.story && (
           <section class="mt-6">
-            <h3 class="text-lg font-bold mb-3">Story</h3>
-            <div class="card p-0">
-              <StoryTemplateSwitcher data={entry.story} />
-            </div>
+            <details class="card p-0" open>
+              <summary class="cursor-pointer text-lg font-bold px-6 py-4">Story</summary>
+              <div class="px-6 pb-6">
+                <StoryTemplateSwitcher data={entry.story} />
+              </div>
+            </details>
           </section>
         )}
         {entry.faqs.length > 0 && (
