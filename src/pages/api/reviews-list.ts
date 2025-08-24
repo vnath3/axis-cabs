@@ -19,7 +19,7 @@ const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
 function sb() {
-  const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+  const key = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY; // server-side only
   if (!SUPABASE_URL || !key) return null;
   return createClient(SUPABASE_URL, key, { auth: { persistSession: false } });
 }
@@ -36,13 +36,11 @@ export const GET: APIRoute = async ({ request }) => {
     const to = from + pageSize - 1;
 
     const client = sb();
-    if (!client)
-      return json(
-        { ok: false, error: "Server not configured (Supabase)" },
-        500,
-      );
+    if (!client) {
+      return json({ ok: false, error: "Server not configured (Supabase)" }, 500);
+    }
 
-    // Try with "comment" column first
+    // Page data — try "comment" first, then alias review_text -> comment
     let selectCols = "id, created_at, rating, comment, name, city";
     let query = client
       .from("reviews")
@@ -53,7 +51,6 @@ export const GET: APIRoute = async ({ request }) => {
 
     let { data: items, error, count } = await query;
 
-    // If "comment" doesn't exist, alias review_text as comment
     if (error && /column "comment"|does not exist/i.test(error.message)) {
       selectCols = "id, created_at, rating, comment:review_text, name, city";
       const retry = await client
@@ -69,20 +66,16 @@ export const GET: APIRoute = async ({ request }) => {
 
     if (error) return json({ ok: false, error: error.message }, 500);
 
-    // Aggregate average rating and total count without schema cache issues
-    const { data: aggregate, error: aggErr } = await client
-      .from("reviews")
-      .select("count(*), average:avg(rating)")
-      .eq("status", "approved")
-      .maybeSingle();
+    // Server-side aggregate via RPC (robust, no parser quirks)
+    const { data: agg, error: rpcErr } = await client.rpc("reviews_aggregate", {
+      p_status: "approved",
+    });
 
-    if (aggErr) return json({ ok: false, error: aggErr.message }, 500);
+    if (rpcErr) return json({ ok: false, error: rpcErr.message }, 500);
 
-    const { count: rawCount, average: rawAvg } =
-      aggregate ?? { count: 0, average: 0 };
-    const totalCount = rawCount ? Number(rawCount) : 0;
+    const totalCount = Number(agg?.[0]?.count ?? 0);
     const average = totalCount
-      ? Number(Number(rawAvg || 0).toFixed(2))
+      ? Number(Number(agg?.[0]?.average ?? 0).toFixed(2))
       : 0;
 
     const hasMore =
