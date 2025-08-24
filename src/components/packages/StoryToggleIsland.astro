@@ -1,0 +1,49 @@
+---
+interface VisualItem {
+  src: string;
+  alt: string;
+  caption: string;
+}
+interface Props {
+  slug: string;
+  visual: VisualItem[];
+  narrative: string;
+}
+const { slug, visual, narrative } = Astro.props as Props;
+---
+<div id={`story-${slug}`}
+  class="story-toggle">
+  <div class="flex gap-2 mb-4">
+    <button type="button" class="px-3 py-1 rounded bg-orange-600 text-white" data-mode="visual">Visual highlights</button>
+    <button type="button" class="px-3 py-1 rounded border" data-mode="narrative">Detailed narrative</button>
+  </div>
+  <div data-panel="visual">
+    <div class="grid sm:grid-cols-3 gap-2">
+      {visual.map((v, i) => (
+        <figure class="text-sm">
+          <img src={v.src} alt={v.alt} class="w-full h-40 object-cover rounded" loading={i===0?'eager':'lazy'} />
+          <figcaption class="mt-1 text-gray-600">{v.caption}</figcaption>
+        </figure>
+      ))}
+    </div>
+  </div>
+  <div data-panel="narrative" class="hidden">
+    <div class="p-4 bg-gray-50 rounded text-sm text-gray-700 whitespace-pre-line">{narrative}</div>
+  </div>
+</div>
+<script>
+  const root = document.getElementById(`story-${slug}`);
+  if (root) {
+    const btns = root.querySelectorAll('button[data-mode]');
+    const panels = root.querySelectorAll('[data-panel]');
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-mode');
+        btns.forEach(b => b.classList.toggle('bg-orange-600', b===btn));
+        btns.forEach(b => b.classList.toggle('text-white', b===btn));
+        btns.forEach(b => b.classList.toggle('border', b!==btn));
+        panels.forEach(p => p.classList.toggle('hidden', p.getAttribute('data-panel') !== mode));
+      });
+    });
+  }
+</script>
