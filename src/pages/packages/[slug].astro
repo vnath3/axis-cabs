@@ -4,6 +4,7 @@ import Header from '@/components/Header.astro';
 import Footer from '@/components/Footer.astro';
 import FAQ from '@/components/FAQ.astro';
 import StoryTemplateSwitcher from '@/components/story/StoryTemplateSwitcher.astro';
+import StoryQuoteToggle from '@/components/story/StoryQuoteToggle.astro';
 import { packages } from '@/data/packages';
 import { destinations } from '@/data/destinations';
 import pricing from '@/data/pricing.json';
@@ -140,7 +141,18 @@ function formatINR(n: number) {
             <details class="card p-0" open>
               <summary class="cursor-pointer text-lg font-bold px-6 py-4">Story</summary>
               <div class="px-6 pb-6">
-                <StoryTemplateSwitcher data={entry.story} />
+                {entry.reviews.length > 0 ? (
+                  <StoryQuoteToggle
+                    story={entry.story}
+                    quote={{
+                      image: entry.images[0] ?? { src: '', alt: '' },
+                      quote: entry.reviews[0].text,
+                      attribution: entry.reviews[0].name
+                    }}
+                  />
+                ) : (
+                  <StoryTemplateSwitcher data={entry.story} />
+                )}
               </div>
             </details>
           </section>
