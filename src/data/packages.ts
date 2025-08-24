@@ -1,331 +1,153 @@
-export type StoryBlock =
-  | {
-      type: "editorial-split";
-      image: { src: string; alt: string };
-      blocks: { title?: string; body: string }[];
-    }
-  | {
-      type: "quote-overlay";
-      image: { src: string; alt: string };
-      quote: string;
-      attribution: string;
-    };
+export interface PackageMeta {
+  durationDays: number;
+  bestSeasons: string[];
+  fromCities: string[];
+}
 
-export type PackageEntry = {
-  slug: string;
+export interface PackageHighlight {
   title: string;
+  detail: string;
+}
+
+export interface ItineraryActivity {
+  time_hint: string;
+  name: string;
+  why: string;
+}
+
+export interface ItineraryDay {
+  day: number;
+  title: string;
+  distance_km: number;
+  travel_time_hours: number;
+  activities: ItineraryActivity[];
+  food?: string[];
+  safety?: string[];
+}
+
+export interface PricingBand {
+  pax: string;
+  vehicle: string;
+  from: number;
+  to: number;
+}
+
+export interface PackagePricing {
+  updated: string; // YYYY-MM-DD
+  assumptions: string[];
+  bands: PricingBand[];
+  disclaimers: string[];
+}
+
+export interface PackageFaq {
+  id: string | number;
+  q: string;
+  a: string;
+}
+
+export interface PackageReview {
+  name: string;
+  rating: number;
+  text: string;
+}
+
+export interface PackageContact {
+  whatsapp: string;
+  phone: string;
+}
+
+export interface PackageEntry {
+  id: string;
+  slug: string;
+  region: string;
+  title: string;
+  subtitle: string;
   summary: string;
-  days: { day: string; items: string[] }[];
-  images: { src: string; alt: string; story: string }[];
-  story?: StoryBlock;
-  faqs: { q: string; a: string }[];
-  reviews: { name: string; rating: number; text: string }[];
-};
+  hero: string;
+  gallery: { src: string; alt: string }[];
+  tripStyle: string[];
+  meta: PackageMeta;
+  highlights: PackageHighlight[];
+  itinerary: ItineraryDay[];
+  pricing?: PackagePricing;
+  faqs: PackageFaq[];
+  reviews: PackageReview[];
+  contact: PackageContact;
+  allowDynamicPricing?: boolean;
+  reviewsEnabled?: boolean;
+}
 
 export const packages: PackageEntry[] = [
   {
-    slug: "ajanta-ellora-2-day-itinerary",
-    title: "Ajanta & Ellora 2‑Day Itinerary — Caves, Fort & Local Food",
-    summary: "Private cab • Handpicked stops • Flexible timing",
-    images: [
-      {
-        src: "/images/destinations/ajanta-ellora.jpg",
-        alt: "Ajanta caves",
-        story:
-          "Centuries-old Buddhist murals adorn the silent halls of Ajanta.",
-      },
-      {
-        src: "/images/destinations/ellora.jpg",
-        alt: "Ellora temple",
-        story:
-          "The monolithic Kailasa temple shows the scale of ancient craftsmanship.",
-      },
-      {
-        src: "/images/destinations/daulatabad_fort.jpg",
-        alt: "Daulatabad Fort",
-        story: "Climb Daulatabad's steep ramps for sweeping Deccan views.",
-      },
+    id: 'ajanta-ellora',
+    slug: 'ajanta-ellora-2-day-itinerary',
+    region: 'Maharashtra',
+    title: 'Ajanta & Ellora 2\u2011Day Itinerary',
+    subtitle: 'Caves, Fort & Local Food',
+    summary: 'Private cab \u2022 Handpicked stops \u2022 Flexible timing',
+    hero: '/images/destinations/ellora.jpg',
+    gallery: [
+      { src: '/images/destinations/ajanta-ellora.jpg', alt: 'Ajanta caves' },
+      { src: '/images/destinations/ellora.jpg', alt: 'Ellora temple' },
+      { src: '/images/destinations/daulatabad_fort.jpg', alt: 'Daulatabad Fort' }
     ],
-    story: {
-      type: "editorial-split",
-      image: {
-        src: "/images/destinations/ellora.jpg",
-        alt: "Ellora temple",
-      },
-      blocks: [
-        {
-          title: "Ancient Artistry",
-          body: "Centuries-old Buddhist murals adorn the silent halls of Ajanta.",
-        },
-        {
-          title: "Engineering Marvel",
-          body: "The monolithic Kailasa temple shows the scale of ancient craftsmanship.",
-        },
-      ],
+    tripStyle: ['Culture', 'Heritage'],
+    meta: {
+      durationDays: 2,
+      bestSeasons: ['Oct', 'Mar'],
+      fromCities: ['Pune', 'Mumbai']
     },
-    days: [
+    highlights: [
+      { title: 'Ajanta murals', detail: 'Centuries-old Buddhist murals adorn the silent halls.' },
+      { title: 'Kailasa temple', detail: 'Monolithic masterpiece at Ellora.' },
+      { title: 'Daulatabad Fort', detail: 'Climb for sweeping Deccan views.' }
+    ],
+    itinerary: [
       {
-        day: "Day 1",
-        items: [
-          "Ellora Caves",
-          "Grishneshwar Temple",
-          "Daulatabad Fort (optional)",
+        day: 1,
+        title: 'Pune to Ellora',
+        distance_km: 260,
+        travel_time_hours: 6,
+        activities: [
+          { time_hint: '06:00', name: 'Depart Pune', why: 'Beat city traffic' },
+          { time_hint: '11:00', name: 'Ellora Caves', why: 'Explore cave temples' },
+          { time_hint: '15:00', name: 'Daulatabad Fort', why: 'Optional climb' }
         ],
+        food: ['Local thali'],
+        safety: ['Carry water']
       },
       {
-        day: "Day 2",
-        items: ["Ajanta Caves", "Scenic viewpoints", "Local thali stop"],
-      },
+        day: 2,
+        title: 'Ajanta & Return',
+        distance_km: 300,
+        travel_time_hours: 7,
+        activities: [
+          { time_hint: '08:00', name: 'Ajanta Caves', why: 'See ancient murals' },
+          { time_hint: '15:00', name: 'Return to Pune', why: 'Evening drop' }
+        ]
+      }
     ],
+    pricing: {
+      updated: '2024-01-01',
+      assumptions: ['AC cab', 'fuel'],
+      bands: [
+        { pax: '1-4', vehicle: 'Sedan', from: 8500, to: 9500 },
+        { pax: '1-6', vehicle: 'SUV', from: 9500, to: 12000 }
+      ],
+      disclaimers: ['Excludes meals and entry tickets']
+    },
     faqs: [
-      {
-        q: "What is the best time to visit Ajanta and Ellora?",
-        a: "October to March offers pleasant weather and clearer views inside the caves. Summers can be extremely hot.",
-      },
-      {
-        q: "How many caves can we cover in two days?",
-        a: "Most travellers comfortably explore 12–15 prominent caves with ample time for photos and breaks.",
-      },
-      {
-        q: "Are guides and entry tickets included?",
-        a: "A local guide can be arranged on request. Tickets and meals are excluded but our team helps you purchase them easily.",
-      },
+      { id: 'time', q: 'Best time to visit?', a: 'October to March offers pleasant weather.' }
     ],
     reviews: [
-      {
-        name: "Anita P.",
-        rating: 5,
-        text: "Driver was knowledgeable and patient. The caves were breathtaking!",
-      },
-      {
-        name: "Rahul M.",
-        rating: 4,
-        text: "Comfortable ride and well planned itinerary. Loved the local thali stop.",
-      },
+      { name: 'Anita P.', rating: 5, text: 'Driver was knowledgeable and patient.' },
+      { name: 'Rahul M.', rating: 4, text: 'Comfortable ride and good food stops.' }
     ],
-  },
-  {
-    slug: "shirdi-darshan-weekend",
-    title: "Shirdi Darshan Weekend — Sai Baba Temple & Local Stops",
-    summary: "Private cab • Darshan assistance • Same day return",
-    images: [
-      {
-        src: "/images/destinations/shirdi.jpg",
-        alt: "Shirdi temple",
-        story:
-          "Early morning aarti at the Sai Baba temple draws thousands of devotees.",
-      },
-      {
-        src: "/images/destinations/ShirdiSaibaba.jpg",
-        alt: "Shirdi market",
-        story: "Colourful shops around the temple sell prasad and souvenirs.",
-      },
-    ],
-    days: [
-      {
-        day: "Day 1",
-        items: [
-          "Early morning pickup",
-          "Shirdi Sai Baba Temple",
-          "Local sightseeing",
-          "Return by night",
-        ],
-      },
-    ],
-    faqs: [
-      {
-        q: "What are the temple darshan timings?",
-        a: "Darshan typically starts around 4 AM and continues till late night. We schedule pickups to match your preferred slot.",
-      },
-      {
-        q: "Can we arrange a VIP darshan pass?",
-        a: "Yes, VIP passes can be arranged subject to temple availability and additional charges.",
-      },
-      {
-        q: "Are meals included in the package?",
-        a: "Meals are not included. Our driver can guide you to clean restaurants en route.",
-      },
-    ],
-    reviews: [
-      {
-        name: "Meena R.",
-        rating: 5,
-        text: "Seamless darshan experience and punctual service.",
-      },
-      {
-        name: "Suresh K.",
-        rating: 4,
-        text: "Clean car and helpful driver. Will book again.",
-      },
-    ],
-  },
-  {
-    slug: "goa-3n4d-beach-escape",
-    title: "Goa 4‑Day Beach Escape — Sun, Sand & Forts",
-    summary:
-      "Airport transfers • North & South Goa tours • Optional watersports",
-    images: [
-      {
-        src: "/images/destinations/goa1.jpg",
-        alt: "Goa beach",
-        story:
-          "Relax on soft sands with gentle Arabian Sea waves lapping nearby.",
-      },
-      {
-        src: "/images/destinations/goa_fort.jpg",
-        alt: "Goa fort",
-        story:
-          "Explore centuries-old coastal forts overlooking turquoise waters.",
-      },
-      {
-        src: "/images/destinations/goa2.jpg",
-        alt: "Goa sunset",
-        story: "Evenings end with vivid orange sunsets across the horizon.",
-      },
-    ],
-    days: [
-      {
-        day: "Day 1",
-        items: ["Arrive Goa", "Check‑in", "Evening on the beach"],
-      },
-      { day: "Day 2", items: ["North Goa tour: Fort Aguada, Calangute, Baga"] },
-      {
-        day: "Day 3",
-        items: ["South Goa tour: Colva Beach, Basilica of Bom Jesus"],
-      },
-      { day: "Day 4", items: ["Checkout and departure"] },
-    ],
-    faqs: [
-      {
-        q: "Is airport transfer included?",
-        a: "Yes, private pickup and drop to Goa airport or railway station are part of the package.",
-      },
-      {
-        q: "When is the best season to visit Goa?",
-        a: "November to February offers sunny days and lively beaches, while June to September is monsoon with fewer crowds.",
-      },
-      {
-        q: "Can we add watersports or a cruise?",
-        a: "Absolutely. Parasailing, jet-ski, or a sunset cruise can be added at extra cost.",
-      },
-    ],
-    reviews: [
-      {
-        name: "Kiran D.",
-        rating: 5,
-        text: "Perfect beach break. Driver knew all the good shacks.",
-      },
-      {
-        name: "Latika S.",
-        rating: 4,
-        text: "Hotel pickup was on time and itinerary covered both North and South Goa.",
-      },
-    ],
-  },
-  {
-    slug: "mahabaleshwar-2d1n",
-    title: "Mahabaleshwar 2‑Day Getaway — Hills & Strawberries",
-    summary: "Scenic viewpoints • Mapro Garden • Flexible schedule",
-    images: [
-      {
-        src: "/images/destinations/mahabaleshwar.jpg",
-        alt: "Mahabaleshwar hills",
-        story: "Morning mist rolls over the lush hills of Mahabaleshwar.",
-      },
-      {
-        src: "/images/destinations/mapro.jpg",
-        alt: "Mapro Garden",
-        story: "Sample fresh strawberry treats at the famous Mapro Garden.",
-      },
-    ],
-    days: [
-      {
-        day: "Day 1",
-        items: ["Pickup from Pune", "Mapro Garden", "Arthur Seat Point"],
-      },
-      { day: "Day 2", items: ["Pratapgad Fort", "Return to Pune"] },
-    ],
-    faqs: [
-      {
-        q: "When is strawberry season in Mahabaleshwar?",
-        a: "December to February is peak strawberry season with farm visits and fresh produce.",
-      },
-      {
-        q: "Do we stay overnight?",
-        a: "Yes, the package includes a night halt in Mahabaleshwar with comfortable accommodation.",
-      },
-      {
-        q: "Is boating at Venna Lake included?",
-        a: "Boating charges are extra and can be paid directly at the lake.",
-      },
-    ],
-    reviews: [
-      {
-        name: "Prakash L.",
-        rating: 5,
-        text: "Great getaway from Pune with plenty of scenic stops.",
-      },
-      {
-        name: "Sneha T.",
-        rating: 4,
-        text: "Loved the strawberries! Wish we had more time at the viewpoints.",
-      },
-    ],
-  },
-  {
-    slug: "golden-triangle-5d",
-    title: "Golden Triangle 5‑Day Tour — Delhi, Agra & Jaipur",
-    summary: "Private cab • Guided sightseeing • Customisable plan",
-    images: [
-      {
-        src: "/images/destinations/taj.jpg",
-        alt: "Taj Mahal",
-        story:
-          "Sunrise at the Taj Mahal is a highlight of the Golden Triangle.",
-      },
-      {
-        src: "/images/destinations/india_gate.jpg",
-        alt: "India Gate",
-        story: "Drive past Delhi's iconic India Gate on your city tour.",
-      },
-      {
-        src: "/images/destinations/jaipur.jpg",
-        alt: "Jaipur fort",
-        story: "The pink city of Jaipur boasts majestic forts and palaces.",
-      },
-    ],
-    days: [
-      { day: "Day 1", items: ["Arrive Delhi", "City tour"] },
-      { day: "Day 2", items: ["Delhi to Agra", "Taj Mahal visit"] },
-      { day: "Day 3", items: ["Agra to Jaipur", "Fatehpur Sikri en route"] },
-      { day: "Day 4", items: ["Jaipur city tour: Amber Fort, Hawa Mahal"] },
-      { day: "Day 5", items: ["Return to Delhi"] },
-    ],
-    faqs: [
-      {
-        q: "How long is the drive between each city?",
-        a: "Each leg averages 4–5 hours with comfort breaks along the way.",
-      },
-      {
-        q: "Are monument entry fees included?",
-        a: "Entry fees and guide charges are extra but we assist with advance booking.",
-      },
-      {
-        q: "Can the itinerary be customised?",
-        a: "Yes, we can add or skip sights and adjust travel pace as per your preference.",
-      },
-    ],
-    reviews: [
-      {
-        name: "Vivek J.",
-        rating: 5,
-        text: "Saw the best of North India in comfort. Highly recommend.",
-      },
-      {
-        name: "Neha A.",
-        rating: 4,
-        text: "Driver was courteous and hotels suggested were good value.",
-      },
-    ],
-  },
+    contact: {
+      whatsapp: '+919922333305',
+      phone: '+919922333305'
+    },
+    allowDynamicPricing: true,
+    reviewsEnabled: true
+  }
 ];

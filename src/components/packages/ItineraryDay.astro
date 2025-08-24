@@ -1,0 +1,45 @@
+---
+export interface Props {
+  day: number;
+  title: string;
+  distance_km: number;
+  travel_time_hours: number;
+  activities: { time_hint: string; name: string; why: string }[];
+  food?: string[];
+  safety?: string[];
+}
+const { day, title, distance_km, travel_time_hours, activities, food, safety } = Astro.props as Props;
+---
+<div class="p-4 border rounded mb-4">
+  <div class="flex justify-between items-center">
+    <h3 class="font-semibold">Day {day}: {title}</h3>
+    <div class="text-xs text-gray-600">{distance_km} km • ~{travel_time_hours} hrs</div>
+  </div>
+  <ul class="mt-2 space-y-2">
+    {activities.map(a => (
+      <li class="flex gap-2 text-sm">
+        <span class="mt-1 h-2 w-2 rounded-full bg-orange-500"></span>
+        <div>
+          <p class="font-medium">{a.time_hint} — {a.name}</p>
+          <p class="text-gray-600">{a.why}</p>
+        </div>
+      </li>
+    ))}
+  </ul>
+  {food && food.length > 0 && (
+    <div class="mt-3">
+      <p class="text-sm font-semibold">Food ideas</p>
+      <div class="flex flex-wrap gap-1 mt-1">
+        {food.map(f => <span class="text-xs bg-gray-100 rounded px-2 py-1">{f}</span>)}
+      </div>
+    </div>
+  )}
+  {safety && safety.length > 0 && (
+    <div class="mt-3">
+      <p class="text-sm font-semibold">Safety</p>
+      <ul class="list-disc list-inside text-sm text-gray-600">
+        {safety.map(s => <li>{s}</li>)}
+      </ul>
+    </div>
+  )}
+</div>
