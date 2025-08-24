@@ -1,0 +1,18 @@
+---
+interface Props {
+  image: { src: string; alt: string };
+  quote: string;
+  attribution: string;
+}
+const { image, quote, attribution } = Astro.props as Props;
+---
+<div class="relative aspect-[16/7] overflow-hidden rounded-lg">
+  <img src={image.src} alt={image.alt} class="absolute inset-0 h-full w-full object-cover" />
+  <div class="relative z-10 h-full w-full bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-end text-white p-6">
+    <svg viewBox="0 0 24 24" class="w-8 h-8 mb-4" fill="currentColor" aria-hidden="true">
+      <path d="M7 17h3V8H5v7h2Zm9-9v7h3V8h-3Z" />
+    </svg>
+    <blockquote class="text-lg md:text-xl leading-snug">{quote}</blockquote>
+    <cite class="mt-2 text-sm not-italic">{attribution}</cite>
+  </div>
+</div>

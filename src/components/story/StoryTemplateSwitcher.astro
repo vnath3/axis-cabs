@@ -1,0 +1,28 @@
+---
+import EditorialSplit from './EditorialSplit.astro';
+import QuoteOverlay from './QuoteOverlay.astro';
+
+type StoryBlock =
+  | {
+      type: 'editorial-split';
+      image: { src: string; alt: string };
+      blocks: { title?: string; body: string }[];
+    }
+  | {
+      type: 'quote-overlay';
+      image: { src: string; alt: string };
+      quote: string;
+      attribution: string;
+    };
+
+interface Props {
+  data: StoryBlock;
+}
+const { data } = Astro.props as Props;
+---
+{data.type === 'editorial-split' && (
+  <EditorialSplit image={data.image} blocks={data.blocks} />
+)}
+{data.type === 'quote-overlay' && (
+  <QuoteOverlay image={data.image} quote={data.quote} attribution={data.attribution} />
+)}

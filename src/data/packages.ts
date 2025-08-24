@@ -1,9 +1,23 @@
+export type StoryBlock =
+  | {
+      type: "editorial-split";
+      image: { src: string; alt: string };
+      blocks: { title?: string; body: string }[];
+    }
+  | {
+      type: "quote-overlay";
+      image: { src: string; alt: string };
+      quote: string;
+      attribution: string;
+    };
+
 export type PackageEntry = {
   slug: string;
   title: string;
   summary: string;
   days: { day: string; items: string[] }[];
   images: { src: string; alt: string; story: string }[];
+  story?: StoryBlock;
   faqs: { q: string; a: string }[];
   reviews: { name: string; rating: number; text: string }[];
 };
@@ -32,6 +46,23 @@ export const packages: PackageEntry[] = [
         story: "Climb Daulatabad's steep ramps for sweeping Deccan views.",
       },
     ],
+    story: {
+      type: "editorial-split",
+      image: {
+        src: "/images/destinations/ellora.jpg",
+        alt: "Ellora temple",
+      },
+      blocks: [
+        {
+          title: "Ancient Artistry",
+          body: "Centuries-old Buddhist murals adorn the silent halls of Ajanta.",
+        },
+        {
+          title: "Engineering Marvel",
+          body: "The monolithic Kailasa temple shows the scale of ancient craftsmanship.",
+        },
+      ],
+    },
     days: [
       {
         day: "Day 1",
