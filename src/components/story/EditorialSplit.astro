@@ -1,0 +1,24 @@
+---
+interface Block {
+  title?: string;
+  body: string;
+}
+interface Props {
+  image: { src: string; alt: string };
+  blocks: Block[];
+}
+const { image, blocks } = Astro.props as Props;
+---
+<div class="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+  <div class="space-y-8">
+    {blocks.map((block, i) => (
+      <article>
+        {block.title && <h4 class="font-semibold mb-2">{block.title}</h4>}
+        <p class="text-sm opacity-80">{block.body}</p>
+      </article>
+    ))}
+  </div>
+  <div class="sticky top-24 self-start">
+    <img src={image.src} alt={image.alt} class="w-full h-full object-cover rounded-lg" />
+  </div>
+</div>

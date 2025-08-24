@@ -3,6 +3,7 @@ import '../../styles/globals.css';
 import Header from '@/components/Header.astro';
 import Footer from '@/components/Footer.astro';
 import FAQ from '@/components/FAQ.astro';
+import StoryTemplateSwitcher from '@/components/story/StoryTemplateSwitcher.astro';
 import { packages } from '@/data/packages';
 import { destinations } from '@/data/destinations';
 import pricing from '@/data/pricing.json';
@@ -134,6 +135,14 @@ function formatINR(n: number) {
             </details>
           </div>
         </section>
+        {entry.story && (
+          <section class="mt-6">
+            <h3 class="text-lg font-bold mb-3">Story</h3>
+            <div class="card p-0">
+              <StoryTemplateSwitcher data={entry.story} />
+            </div>
+          </section>
+        )}
         {entry.faqs.length > 0 && (
           <section class="mt-6">
             <h3 class="text-lg font-bold mb-3">FAQ</h3>
