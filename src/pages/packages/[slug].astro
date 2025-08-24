@@ -21,6 +21,10 @@ const dest = destinations.find(d => d.slug.replace(/^\/packages\//, '') === slug
 const WA = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
 const waText = encodeURIComponent(`Hi Axis Cabs 👋\nI'm interested in "${entry.title}". Please share details.`);
 const waHref = `https://wa.me/${WA}?text=${waText}`;
+const reviewCount = entry.reviews.length;
+const averageRating = reviewCount > 0
+  ? entry.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+  : 0;
 function formatINR(n: number) {
   try {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
@@ -136,9 +140,13 @@ function formatINR(n: number) {
             <FAQ items={entry.faqs} />
           </section>
         )}
-        {entry.reviews.length > 0 && (
+          {entry.reviews.length > 0 && (
           <section class="mt-6">
-            <h3 class="text-lg font-bold mb-3">Reviews</h3>
+            <h3 class="text-lg font-bold mb-1">Reviews</h3>
+            <p class="mb-3 text-sm flex items-center gap-1">
+              <svg viewBox="0 0 20 20" class="h-4 w-4 fill-amber-400" aria-hidden="true"><path d="M10 15.27 16.18 19l-1.64-7.03L20 7.24l-7.19-.61L10 0 7.19 6.63 0 7.24l5.46 4.73L3.82 19z"/></svg>
+              {averageRating.toFixed(1)} ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
+            </p>
             <div class="space-y-4">
               {entry.reviews.map(r => (
                 <div class="card">
