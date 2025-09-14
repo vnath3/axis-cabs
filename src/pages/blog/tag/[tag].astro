@@ -1,0 +1,52 @@
+---
+import '../../../styles/globals.css';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+
+export async function getStaticPaths() {
+  const posts = await Astro.glob('../*.md');
+  const tags = Array.from(new Set(posts.flatMap((p) => p.frontmatter?.tags || []).map((t) => String(t).toLowerCase())));
+  const toSlug = (s) => s.replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');
+  return tags.map((t) => ({ params: { tag: toSlug(t) } }));
+}
+
+const { tag } = Astro.params;
+const posts = await Astro.glob('../*.md');
+const fromSlug = (s) => String(s).toLowerCase();
+const displayTag = (posts.flatMap((p)=>p.frontmatter?.tags||[]).find((t)=> fromSlug(t).replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-') === tag)) || tag;
+const list = posts.filter((p) => (p.frontmatter?.tags || []).some((t) => fromSlug(t).replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-') === tag));
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blog • {displayTag}</title>
+    <meta name="description" content={`Posts tagged ${displayTag}`} />
+  </head>
+  <body>
+    <Header />
+    <main class="max-w-6xl mx-auto px-4 py-10">
+      <h1 class="text-3xl font-bold mb-6">Posts tagged “{displayTag}”</h1>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {list.map((p) => (
+          <a href={p.url} class="group block rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-soft hover:shadow-md transition">
+            {p.frontmatter?.hero && (
+              <img src={p.frontmatter.hero} alt={p.frontmatter.title} class="w-full h-40 object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+            )}
+            <div class="p-4">
+              <h2 class="text-lg font-semibold text-slate-900 group-hover:underline">{p.frontmatter?.title}</h2>
+              <p class="mt-1 text-sm text-slate-600 line-clamp-2">{p.frontmatter?.description}</p>
+              <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
+                <span>{p.frontmatter?.pubDate || ''}</span>
+                <span>{(p.frontmatter?.tags || []).join(' • ')}</span>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+      {list.length === 0 && <p class="text-slate-600">No posts for this tag yet.</p>}
+    </main>
+    <Footer />
+  </body>
+  </html>
+

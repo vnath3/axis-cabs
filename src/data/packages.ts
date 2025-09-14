@@ -244,5 +244,385 @@ export const packages: PackageEntry[] = [
     },
     allowDynamicPricing: true,
     reviewsEnabled: true
+  },
+  {
+    id: 'shirdi-darshan',
+    slug: 'shirdi-darshan',
+    region: 'Maharashtra',
+    title: 'Shirdi Darshan',
+    subtitle: 'Sai Baba Samadhi Mandir & Sacred Sites',
+    summary: 'Same-day trip • Priority planning • Clean cabs & pro drivers',
+    narrativeHtml: `
+<h1>Shirdi Darshan – A Peaceful Pilgrimage to Sai Baba</h1>
+<p>Plan a comfortable one-day or overnight visit to Shirdi with Axis Cabs. We handle timings around <strong>aarti</strong>, queue strategy, and food/comfort breaks so your visit is unhurried and meaningful.</p>
+<hr />
+<h2>Key Temples & Spots</h2>
+<ul>
+  <li><strong>Samadhi Mandir</strong> – Main darshan (peak hours early morning & evenings)</li>
+  <li><strong>Dwarkamai</strong> – Baba’s residence; sacred dhuni (fire)</li>
+  <li><strong>Chavadi</strong> – Procession site, serene atmosphere</li>
+  <li><strong>Lendi Baug</strong> – Garden where Baba meditated</li>
+  <li><strong>Shani Shingnapur</strong> (optional) – 70 km from Shirdi; temple without doors</li>
+  </ul>
+<hr />
+<h2>Good to Know</h2>
+<ul>
+  <li><strong>Darshan Windows</strong>: Mandir is open from early morning; Kakad Aarti is popular</li>
+  <li><strong>Dress & Decorum</strong>: Modest clothing preferred; deposit bags/phones if required</li>
+  <li><strong>Best Season</strong>: Oct–Mar pleasant; weekends/festivals are busy – plan buffer time</li>
+</ul>
+`,
+    hero: '/images/destinations/ShirdiSaibaba.jpg',
+    gallery: [
+      { src: '/images/destinations/ShirdiSaibaba.jpg', alt: 'Shirdi – Sai Baba Samadhi Mandir' },
+      { src: '/images/destinations/shirdi.jpg', alt: 'Shirdi town & temple complex' }
+    ],
+    tripStyle: ['Pilgrimage', 'Spiritual'],
+    meta: {
+      durationDays: 1,
+      bestSeasons: ['Oct', 'Mar'],
+      fromCities: ['Pune', 'Mumbai']
+    },
+    highlights: [
+      { title: 'Samadhi Mandir darshan', detail: 'Seek blessings at Sai Baba’s Samadhi.' },
+      { title: 'Dwarkamai & Chavadi', detail: 'Walk through spaces where Baba lived and taught.' },
+      { title: 'Shani Shingnapur Temple (optional)', detail: 'Unique open-air shrine; combine if time permits.' }
+    ],
+    itinerary: [
+      {
+        day: 1,
+        title: 'Pune – Shirdi – Pune (or Mumbai – Shirdi – Mumbai)',
+        distance_km: 450,
+        travel_time_hours: 10,
+        activities: [
+          { time_hint: '05:30', name: 'Start from your city', why: 'Early start avoids traffic; reach before peak queues' },
+          { time_hint: '10:30', name: 'Shirdi Darshan', why: 'Samadhi Mandir + Dwarkamai + Chavadi + Lendi Baug' },
+          { time_hint: '14:00', name: 'Lunch break', why: 'Recommended clean eateries close to Mandir road' },
+          { time_hint: '15:30', name: 'Optional: Shani Shingnapur', why: 'Add if energy/time permits (70 km detour)' },
+          { time_hint: '19:00', name: 'Depart Shirdi', why: 'Return with buffer for breaks' }
+        ],
+        food: ['South Indian breakfast en route', 'Simple thali near Mandir'],
+        safety: ['Carry water & light snacks', 'Keep footwear & valuables secure']
+      }
+    ],
+    pricing: {
+      updated: '2024-01-01',
+      assumptions: ['AC cab', 'driver allowance', 'fuel & tolls'],
+      bands: [
+        { pax: '1-4', vehicle: 'Sedan', from: 5500, to: 7000 },
+        { pax: '1-6', vehicle: 'SUV', from: 6500, to: 8500 },
+        { pax: '1-12', vehicle: 'Traveller', from: 12000, to: 15000 }
+      ],
+      disclaimers: ['Temple entry not included', 'Actual time depends on crowd & aarti slots']
+    },
+    faqs: [
+      { id: 1, q: 'Best time for darshan?', a: 'Early morning (Kakad Aarti window) or late evening has relatively shorter queues. Weekdays are lighter than weekends/festivals.' },
+      { id: 2, q: 'Can I add Shani Shingnapur?', a: 'Yes. It’s about 70 km from Shirdi. We can add it if time/energy permits, or plan an overnight trip.' },
+      { id: 3, q: 'What to wear / carry?', a: 'Modest wear preferred. Carry water, a light shawl in winter, and keep valuables minimal.' },
+      { id: 4, q: 'Food & washrooms en route?', a: 'We stop at clean, known places for breakfast/lunch and restrooms. Let the driver know preferences.' },
+      { id: 5, q: 'Is photography allowed?', a: 'Inside the Mandir, photography may be restricted. Follow the latest temple guidelines.' }
+    ],
+    reviews: [
+      { name: 'Meera S.', rating: 5, text: 'Peaceful darshan and very courteous driver – perfect day trip.', city: 'Pune', created_at: '2024-03-10' },
+      { name: 'Daniel R.', rating: 5, text: 'They planned around aarti timings. Smooth journey throughout.', city: 'London', created_at: '2024-04-02' },
+      { name: 'Sanjay T.', rating: 4, text: 'Clean car, punctual pickup. Added Shani Shingnapur as requested.', city: 'Mumbai', created_at: '2024-05-21' },
+      { name: 'Ritika G.', rating: 5, text: 'Driver guided us through queues and parking – stress-free.', city: 'Bengaluru', created_at: '2024-06-15' },
+      { name: 'Arun P.', rating: 5, text: 'Great coordination and safe driving. Will book again.', city: 'Hyderabad', created_at: '2024-07-08' }
+    ],
+    contact: {
+      whatsapp: '+919922333305',
+      phone: '+919922333305'
+    },
+    allowDynamicPricing: true,
+    reviewsEnabled: true
+  },
+  {
+    id: 'goa-coastal',
+    slug: 'goa-3n4d-beach-escape',
+    region: 'Goa',
+    title: 'Goa Coastal 3N/4D',
+    subtitle: 'Beaches, Forts, Sunsets & Seafood',
+    summary: 'Private cab • Handpicked stays • Flexible sightseeing',
+    narrativeHtml: `
+<h1>Goa Coastal – Sun, Sand, and Slow Days</h1>
+<p>Experience Goa beyond the rush. Mix iconic beaches with quiet coves, heritage forts, and cafés you’ll want to linger at. This coastal plan balances <strong>North Goa highlights</strong> with time to unwind.</p>
+<hr />
+<h2>Trip Snapshot</h2>
+<ul>
+  <li><strong>Best for</strong>: Couples, families, friends who prefer an easy pace</li>
+  <li><strong>Style</strong>: Leisure • Beach • Heritage</li>
+  <li><strong>Season</strong>: Nov–Mar is peak (pleasant); monsoon is lush and quiet</li>
+</ul>
+`,
+    hero: '/images/destinations/goa.jpg',
+    gallery: [
+      { src: '/images/destinations/goa.jpg', alt: 'Goa beach shoreline at sunset' },
+      { src: '/images/destinations/goa1.jpg', alt: 'Palm-lined beach road in Goa' },
+      { src: '/images/destinations/goa2.jpg', alt: 'Quiet cove and blue waters in Goa' },
+      { src: '/images/destinations/goa_fort.jpg', alt: 'Goa coastal fort and sea views' }
+    ],
+    tripStyle: ['Beach', 'Leisure'],
+    meta: {
+      durationDays: 4,
+      bestSeasons: ['Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+      fromCities: ['Goa Airport (GOI)', 'Pune', 'Mumbai']
+    },
+    highlights: [
+      { title: 'Fort Aguada & Chapora', detail: 'Golden-hour viewpoints and coastal history.' },
+      { title: 'Candolim • Calangute • Baga', detail: 'Classic beach trio with shacks and watersports.' },
+      { title: 'Vagator & Anjuna', detail: 'Cliff views, cafés, and flea market (days vary).' }
+    ],
+    itinerary: [
+      {
+        day: 1,
+        title: 'Arrival • Beach Walks',
+        distance_km: 40,
+        travel_time_hours: 1.5,
+        activities: [
+          { time_hint: '12:00', name: 'Airport/Station pickup', why: 'Smooth transfer to your stay' },
+          { time_hint: '16:00', name: 'Candolim beach & sunset', why: 'Easy first day, unwind by the sea' }
+        ],
+        food: ['Beach shack fresh catch', 'Goan curries'],
+        safety: ['Hydrate and use reef-safe sunscreen']
+      },
+      {
+        day: 2,
+        title: 'Forts & North Goa Circuit',
+        distance_km: 70,
+        travel_time_hours: 3,
+        activities: [
+          { time_hint: '09:00', name: 'Fort Aguada', why: 'Views across the Arabian Sea' },
+          { time_hint: '12:30', name: 'Anjuna lunch', why: 'Cafés with cliff views' },
+          { time_hint: '16:30', name: 'Chapora Fort', why: 'Golden-hour photos and breeze' }
+        ],
+        food: ['Prawn recheado', 'Kingfish rawa fry'],
+        safety: ['Wear comfy footwear for fort climbs']
+      },
+      {
+        day: 3,
+        title: 'Free Day • Optional South Goa',
+        distance_km: 120,
+        travel_time_hours: 4,
+        activities: [
+          { time_hint: '10:00', name: 'Optional: Colva/Palolem', why: 'Quieter beaches, postcard coves' },
+          { time_hint: '18:30', name: 'Night market (seasonal)', why: 'Music, street food, artisanal stalls' }
+        ],
+        food: ['Local bakeries', 'Beach BBQ'],
+        safety: ['Check tide/watersports flags']
+      },
+      {
+        day: 4,
+        title: 'Easy Morning • Departure',
+        distance_km: 40,
+        travel_time_hours: 1.5,
+        activities: [
+          { time_hint: '08:30', name: 'Café breakfast', why: 'Slow start before checkout' },
+          { time_hint: '11:00', name: 'Drop at Airport/Station', why: 'Buffer for security & queues' }
+        ]
+      }
+    ],
+    pricing: {
+      updated: '2024-01-01',
+      assumptions: ['AC cab', 'local sightseeing as per plan'],
+      bands: [
+        { pax: '1-4', vehicle: 'Sedan', from: 11500, to: 14500 },
+        { pax: '1-6', vehicle: 'SUV', from: 13500, to: 17500 }
+      ],
+      disclaimers: ['Hotel & flights not included unless specified', 'Watersports and entry tickets extra']
+    },
+    faqs: [
+      { id: 1, q: 'Best months to visit Goa?', a: 'Nov–Mar for pleasant weather; monsoon (Jun–Sep) is quieter and lush.' },
+      { id: 2, q: 'Is this kid-friendly?', a: 'Yes. We pace the day light and can add kid-friendly cafés and safe beaches.' },
+      { id: 3, q: 'South vs. North Goa?', a: 'North has more cafés/markets; South has calmer beaches. This plan leans North with an optional South day.' },
+      { id: 4, q: 'What to pack?', a: 'Light cottons, sunscreen, hat, flip flops, and a light cover-up for evenings.' },
+      { id: 5, q: 'Can you add stays?', a: 'Yes. Share a budget range and vibe (resort/boutique/hostel) and we’ll suggest options.' }
+    ],
+    reviews: [
+      { name: 'Priya N.', rating: 5, text: 'Perfect mix of beaches and cafés. Driver was patient and helpful.', city: 'Bengaluru', created_at: '2024-02-11' },
+      { name: 'Alex T.', rating: 5, text: 'Loved the fort sunsets and the flexible plan. Great value.', city: 'London', created_at: '2024-03-02' },
+      { name: 'Rohit S.', rating: 4, text: 'Clean car, good local tips. Will try South Goa next time.', city: 'Pune', created_at: '2024-04-18' },
+      { name: 'Nikita M.', rating: 5, text: 'Super smooth airport transfers and beach days. Stress-free!', city: 'Mumbai', created_at: '2024-05-27' }
+    ],
+    contact: {
+      whatsapp: '+919922333305',
+      phone: '+919922333305'
+    },
+    allowDynamicPricing: true,
+    reviewsEnabled: true
+  },
+  {
+    id: 'mahabaleshwar-2d1n',
+    slug: 'mahabaleshwar-2d1n',
+    region: 'Maharashtra',
+    title: 'Mahabaleshwar 2D/1N',
+    subtitle: 'Valley Views, Mapro & Temples',
+    summary: 'Private cab • Scenic viewpoints • Strawberries in season',
+    narrativeHtml: `
+<h1>Mahabaleshwar – Hills, Viewpoints, and Strawberries</h1>
+<p>A classic Western Ghats getaway. Explore lush valleys, serene lakes, and the famous Mapro garden. Easy drives, cool breeze, and sunset points make this a perfect short break.</p>
+<hr />
+<h2>Trip Snapshot</h2>
+<ul>
+  <li><strong>Best for</strong>: Families & couples</li>
+  <li><strong>Style</strong>: Hill • Leisure • Food</li>
+  <li><strong>Season</strong>: Oct–Mar is pleasant; Feb–Apr for strawberries; monsoon is lush</li>
+</ul>
+`,
+    hero: '/images/destinations/mahabaleshwar.jpg',
+    gallery: [
+      { src: '/images/destinations/mahabaleshwar.jpg', alt: 'Mahabaleshwar – valley views' },
+      { src: '/images/destinations/mapro.jpg', alt: 'Mapro garden – strawberries and café' }
+    ],
+    tripStyle: ['Hill', 'Leisure'],
+    meta: {
+      durationDays: 2,
+      bestSeasons: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
+      fromCities: ['Pune', 'Mumbai']
+    },
+    highlights: [
+      { title: 'Elephant’s Head Point', detail: 'Dramatic valley cliffs and breezes.' },
+      { title: 'Venna Lake', detail: 'Boating and easy lakeside strolls.' },
+      { title: 'Mapro Garden', detail: 'Seasonal strawberries, sandwiches & shakes.' }
+    ],
+    itinerary: [
+      {
+        day: 1,
+        title: 'Pune/Mumbai – Mahabaleshwar',
+        distance_km: 120,
+        travel_time_hours: 4,
+        activities: [
+          { time_hint: '08:00', name: 'Depart city', why: 'Beat traffic; clear air on ghat roads' },
+          { time_hint: '12:30', name: 'Venna Lake & lunch', why: 'Easy start to the trip' },
+          { time_hint: '16:30', name: 'Sunset point (e.g., Wilson/Elphinstone)', why: 'Golden-hour valley views' }
+        ],
+        food: ['Corn patties, strawberry cream'],
+        safety: ['Carry light jackets; ghats can be misty']
+      },
+      {
+        day: 2,
+        title: 'Viewpoints • Mapro • Return',
+        distance_km: 150,
+        travel_time_hours: 4,
+        activities: [
+          { time_hint: '09:00', name: 'Elephant’s Head/Kate’s Point', why: 'Iconic spots before crowds' },
+          { time_hint: '12:30', name: 'Mapro Garden', why: 'Seasonal strawberry delights' },
+          { time_hint: '15:30', name: 'Return drive', why: 'Reach by evening' }
+        ]
+      }
+    ],
+    pricing: {
+      updated: '2024-01-01',
+      assumptions: ['AC cab', 'driver allowance', 'tolls & parking'],
+      bands: [
+        { pax: '1-4', vehicle: 'Sedan', from: 6500, to: 8500 },
+        { pax: '1-6', vehicle: 'SUV', from: 8000, to: 10500 }
+      ],
+      disclaimers: ['Hotel & activities not included unless specified']
+    },
+    faqs: [
+      { id: 1, q: 'Best time to visit?', a: 'Oct–Mar is pleasant; Feb–Apr for strawberries; monsoon is lush but can be foggy.' },
+      { id: 2, q: 'Is boating open at Venna Lake?', a: 'Usually yes, but depends on weather and crowd. We’ll advise on the day.' },
+      { id: 3, q: 'Good for kids?', a: 'Yes – easy walks, boating, and Mapro treats keep it fun.' },
+      { id: 4, q: 'Stay options?', a: 'We can suggest resorts/boutiques depending on budget and vibe.' }
+    ],
+    reviews: [
+      { name: 'Kunal D.', rating: 4, text: 'Lovely weekend – clean cab and flexible stops.', city: 'Pune', created_at: '2024-02-08' },
+      { name: 'Aishwarya P.', rating: 4, text: 'Driver knew the best points; Mapro lunch was great.', city: 'Mumbai', created_at: '2024-03-14' },
+      { name: 'Tanvi R.', rating: 4, text: 'Smooth ghat driving and on-time pickups.', city: 'Nashik', created_at: '2024-04-20' },
+      { name: 'Viren S.', rating: 4, text: 'Good plan and helpful suggestions.', city: 'Ahmedabad', created_at: '2024-05-11' },
+      { name: 'Rachel M.', rating: 4, text: 'Comfortable car and scenic views everywhere.', city: 'London', created_at: '2024-06-02' }
+    ],
+    contact: {
+      whatsapp: '+919922333305',
+      phone: '+919922333305'
+    },
+    allowDynamicPricing: true,
+    reviewsEnabled: true
+  },
+  {
+    id: 'golden-triangle-5d',
+    slug: 'golden-triangle-5d',
+    region: 'Delhi–Agra–Jaipur',
+    title: 'Golden Triangle 5D',
+    subtitle: 'Delhi, Agra (Taj) & Jaipur Highlights',
+    summary: 'Private cab • Guided sights • Flexible pacing',
+    narrativeHtml: `
+<h1>Golden Triangle – India’s Classic Culture Circuit</h1>
+<p>Cover the icons with time to breathe: Old Delhi bazaars, the Taj Mahal at sunrise, and Jaipur’s forts and palaces. Balanced driving legs with curated food stops and photo breaks.</p>
+<hr />
+<h2>Trip Snapshot</h2>
+<ul>
+  <li><strong>Best for</strong>: First-time visitors, culture lovers</li>
+  <li><strong>Style</strong>: Heritage • Food • Photography</li>
+  <li><strong>Season</strong>: Oct–Mar is ideal; summers are hot</li>
+</ul>
+`,
+    hero: '/images/destinations/golden-triangle.jpg',
+    gallery: [
+      { src: '/images/destinations/taj.jpg', alt: 'Agra – Taj Mahal at sunrise' },
+      { src: '/images/destinations/india_gate.jpg', alt: 'Delhi – India Gate' },
+      { src: '/images/destinations/jaipur.jpg', alt: 'Jaipur – Amer Fort & pink city vibes' }
+    ],
+    tripStyle: ['Heritage', 'Culture'],
+    meta: {
+      durationDays: 5,
+      bestSeasons: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+      fromCities: ['Delhi']
+    },
+    highlights: [
+      { title: 'Old Delhi & New Delhi', detail: 'Red Fort, Jama Masjid, Rajpath & markets.' },
+      { title: 'Taj Mahal & Agra Fort', detail: 'Sunrise Taj visit and Mughal architecture.' },
+      { title: 'Jaipur Forts & Palaces', detail: 'Amber, City Palace, Hawa Mahal, local bazaars.' }
+    ],
+    itinerary: [
+      { day: 1, title: 'Arrive Delhi • Local Sights', distance_km: 60, travel_time_hours: 3, activities: [
+        { time_hint: '10:00', name: 'India Gate & Rajpath', why: 'Orientation and photos' },
+        { time_hint: '16:00', name: 'Old Delhi walk', why: 'Bazaars and street food' }
+      ]},
+      { day: 2, title: 'Delhi → Agra', distance_km: 230, travel_time_hours: 4.5, activities: [
+        { time_hint: '09:00', name: 'Agra Fort', why: 'Unmissable Mughal fort' },
+        { time_hint: '17:30', name: 'Mehtab Bagh sunset', why: 'Taj from across the Yamuna' }
+      ]},
+      { day: 3, title: 'Taj Sunrise • Agra → Jaipur', distance_km: 240, travel_time_hours: 5, activities: [
+        { time_hint: '06:00', name: 'Taj Mahal sunrise', why: 'Best light and thinner crowds' },
+        { time_hint: '12:00', name: 'Drive to Jaipur via Fatehpur Sikri (optional)', why: 'Historic detour if time permits' }
+      ]},
+      { day: 4, title: 'Jaipur Forts & City', distance_km: 80, travel_time_hours: 3, activities: [
+        { time_hint: '09:00', name: 'Amber Fort', why: 'Hilltop fort and views' },
+        { time_hint: '15:30', name: 'City Palace & Hawa Mahal', why: 'Royal residences and iconic façade' }
+      ]},
+      { day: 5, title: 'Jaipur → Delhi • Depart', distance_km: 270, travel_time_hours: 5.5, activities: [
+        { time_hint: '09:00', name: 'Local crafts & brunch', why: 'Pick up souvenirs and relax' },
+        { time_hint: '12:00', name: 'Drive to Delhi', why: 'Airport/rail drop with buffer' }
+      ]}
+    ],
+    pricing: {
+      updated: '2024-01-01',
+      assumptions: ['AC cab', 'intercity transfers & local sightseeing'],
+      bands: [
+        { pax: '1-4', vehicle: 'Sedan', from: 28500, to: 34500 },
+        { pax: '1-6', vehicle: 'SUV', from: 32500, to: 39500 }
+      ],
+      disclaimers: ['Hotel & monument tickets extra unless specified', 'Guide services on request']
+    },
+    faqs: [
+      { id: 1, q: 'Is Taj closed on any day?', a: 'Yes, the Taj Mahal is closed on Fridays.' },
+      { id: 2, q: 'Best time to visit?', a: 'Oct–Mar is pleasant; summer heat can be intense, plan early starts.' },
+      { id: 3, q: 'Can you add a guide?', a: 'Yes, certified guides can be arranged in each city.' },
+      { id: 4, q: 'Can we customize pace?', a: 'Absolutely. We can add free time, cafés, or shopping as you like.' }
+    ],
+    reviews: [
+      { name: 'Helena W.', rating: 4, text: 'Great pacing and helpful driver across cities.', city: 'Berlin', created_at: '2024-01-18' },
+      { name: 'Rajat B.', rating: 4, text: 'Smooth transfers and clean car. Taj sunrise was magical.', city: 'Mumbai', created_at: '2024-02-09' },
+      { name: 'Sofia L.', rating: 5, text: 'Loved Jaipur day and food stops. Very well planned.', city: 'Lisbon', created_at: '2024-03-27' },
+      { name: 'James P.', rating: 4, text: 'Good flexibility and safe driving.', city: 'London', created_at: '2024-04-30' },
+      { name: 'Neha A.', rating: 4, text: 'Comfortable and efficient – covered all key spots.', city: 'Delhi', created_at: '2024-05-20' }
+    ],
+    contact: {
+      whatsapp: '+919922333305',
+      phone: '+919922333305'
+    },
+    allowDynamicPricing: true,
+    reviewsEnabled: true
   }
 ];

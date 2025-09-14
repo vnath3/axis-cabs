@@ -1,0 +1,135 @@
+---
+import '../../styles/globals.css';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+
+const posts = await Astro.glob('./*.md');
+// Build tag frequency and keep top ~8
+const tagCounts = new Map<string, number>();
+for (const p of posts) {
+  for (const raw of (p.frontmatter?.tags || [])) {
+    const t = String(raw).trim();
+    if (!t) continue;
+    tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
+  }
+}
+const tags = Array.from(tagCounts.entries())
+  .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+  .slice(0, 8)
+  .map(([t]) => t);
+const site = (Astro.site?.toString() || 'https://axiscabs.com').replace(/\/$/, '');
+const blogJsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Blog',
+  name: 'Axis Cabs Blog',
+  url: site + '/blog',
+});
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blog | Axis Cabs</title>
+    <meta name="description" content="Travel tips, destination guides, and route planning insights from Axis Cabs." />
+    <link rel="icon" href="/favicon.svg" />
+    <script type="application/ld+json" is:inline set:html={blogJsonLd} />
+  </head>
+  <body>
+    <Header />
+    <main class="max-w-6xl mx-auto px-4 py-10">
+      <h1 class="text-3xl font-bold mb-6">Blog</h1>
+
+      <!-- Filters: search + tags -->
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+        <input id="blog-search" type="search" placeholder="Search posts..." class="border rounded-xl px-4 py-2 w-full sm:w-72" />
+        <div id="blog-tags" class="flex flex-wrap gap-2">
+          {tags.map((t) => (
+            <button type="button" class="px-3 py-1 rounded-full border text-sm" data-filter-tag={t.toLowerCase()}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      <div id="blog-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {posts.map((p) => {
+          const title = String(p.frontmatter?.title || '').toLowerCase();
+          const tagList = (p.frontmatter?.tags || []).map((t) => String(t).toLowerCase()).join(',');
+          return (
+            <article
+              class="group bg-white rounded-2xl shadow-soft ring-1 ring-black/5 hover:shadow-md transition"
+              data-title={title}
+              data-tags={tagList}
+            >
+              <a href={p.url} class="block rounded-t-2xl overflow-hidden">
+                {p.frontmatter?.hero && (
+                  <img src={p.frontmatter.hero} alt={p.frontmatter.title} class="w-full h-40 object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+                )}
+              </a>
+              <div class="p-4">
+                <h2 class="text-lg font-semibold text-slate-900">
+                  <a href={p.url} class="hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded">
+                    {p.frontmatter?.title}
+                  </a>
+                </h2>
+                <p class="mt-1 text-sm text-slate-600 line-clamp-2">{p.frontmatter?.description}</p>
+              <div class="mt-3 flex items-center justify-end text-xs text-slate-500">
+                <span class="flex flex-wrap items-center gap-1">
+                  {(p.frontmatter?.tags || []).slice(0,2).map((t, i) => (
+                    <span class="inline-flex items-center gap-1">
+                      {i>0 && <span aria-hidden="true" class="mx-0.5">•</span>}
+                      <a href={`/blog/tag/${String(t).toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-')}`} class="hover:underline">{t}</a>
+                    </span>
+                  ))}
+                </span>
+              </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      <div class="mt-10 text-center">
+        <a href="https://wa.me/919922333305?text=Hi%20Axis%20Cabs,%20I%20have%20a%20travel%20query." class="btn-primary">Get a Travel Plan</a>
+      </div>
+    </main>
+    <Footer />
+    <script is:inline>
+      // fade-up on view
+      const cards = Array.from(document.querySelectorAll('#blog-grid article'));
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('revealed'); });
+      }, { threshold: 0.1 });
+      cards.forEach((el) => io.observe(el));
+
+      // filters
+      const search = document.getElementById('blog-search');
+      const tagButtons = Array.from(document.querySelectorAll('[data-filter-tag]'));
+      function applyFilters() {
+        const q = (search.value || '').toLowerCase();
+        const activeBtn = document.querySelector('[data-filter-tag].active');
+        const active = activeBtn ? activeBtn.getAttribute('data-filter-tag') : null;
+        cards.forEach((card) => {
+          const title = card.getAttribute('data-title') || '';
+          const tags = (card.getAttribute('data-tags') || '').split(',');
+          const matchesQ = !q || title.includes(q);
+          const matchesTag = !active || tags.includes(active);
+          card.classList.toggle('hidden', !(matchesQ && matchesTag));
+        });
+      }
+      search?.addEventListener('input', applyFilters);
+      tagButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (btn.classList.contains('active')) {
+            btn.classList.remove('active','bg-orange-600','text-white');
+          } else {
+            tagButtons.forEach((b) => b.classList.remove('active','bg-orange-600','text-white'));
+            btn.classList.add('active','bg-orange-600','text-white');
+          }
+          applyFilters();
+        });
+      });
+    </script>
+    <style is:global>
+      #blog-grid article { transform: translateY(8px); opacity: 0; transition: opacity .4s ease, transform .4s ease; }
+      #blog-grid article.revealed { transform: translateY(0); opacity: 1; }
+    </style>
+  </body>
+  </html>

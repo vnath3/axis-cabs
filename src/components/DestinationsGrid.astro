@@ -59,12 +59,14 @@ function formatINR(n: number) {
 }
 
 /* ----------------- JSON-LD (1): ItemList with per-card Offers ----------------- */
+const list = (items || []).filter((it) => !(it.slug || '').startsWith('/city-to-city'));
+
 const jsonLdItemList = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   "name": "Destinations & Experiences",
   "itemListOrder": "https://schema.org/ItemListOrderAscending",
-  "itemListElement": items.map((item, idx) => ({
+  "itemListElement": list.map((item, idx) => ({
     "@type": "ListItem",
     "position": idx + 1,
     "url": absUrl(item.slug),
@@ -93,7 +95,7 @@ const jsonLdItemList = {
 };
 
 /* ----------------- JSON-LD (2): Section-level AggregateOffer ----------------- */
-const prices = items.map(i => i.priceFromINR).filter(n => typeof n === 'number' && !Number.isNaN(n));
+const prices = list.map(i => i.priceFromINR).filter(n => typeof n === 'number' && !Number.isNaN(n));
 const lowPrice = prices.length ? Math.min(...prices) : undefined;
 const highPrice = prices.length ? Math.max(...prices) : undefined;
 
@@ -108,7 +110,7 @@ const jsonLdAggregate = {
     "priceCurrency": "INR",
     ...(lowPrice !== undefined ? { "lowPrice": lowPrice } : {}),
     ...(highPrice !== undefined ? { "highPrice": highPrice } : {}),
-    "offerCount": items.length
+    "offerCount": list.length
   },
 "brand": { "@id": "https://axiscabs.com/#org" }
 };
@@ -136,7 +138,7 @@ const jsonLd2 = JSON.stringify(jsonLdAggregate);
     ]}
     style={mobileCarousel ? "scroll-padding-left: 1rem;" : undefined}
     >
-      {items.map((item) => (
+      {list.map((item) => (
         <article
           class:list={[
             "group bg-white rounded-2xl shadow-sm ring-1 ring-gray-200/70 hover:ring-gray-300 transition-all duration-200",
@@ -153,7 +155,7 @@ const jsonLd2 = JSON.stringify(jsonLdAggregate);
               src={item.image.src}
               alt={item.image.alt}
               loading="lazy"
-              class="w-full h-48 sm:h-44 lg:h-52 object-cover"
+              class="w-full h-48 sm:h-44 lg:h-52 object-cover transition-transform duration-500 ease-out group-hover:scale-105 transform-gpu will-change-transform motion-reduce:transition-none motion-reduce:transform-none"
             />
           </a>
 

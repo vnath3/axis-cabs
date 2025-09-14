@@ -23,7 +23,7 @@ export const destinations: DestinationItem[] = [
   },
   {
     title: "Shirdi Darshan",
-    slug: "/packages/shirdi-darshan-weekend",
+    slug: "/packages/shirdi-darshan",
     duration: "1 Day / Same Day Return",
     priceFromINR: 4999,
     image: {

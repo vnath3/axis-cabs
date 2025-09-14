@@ -1,0 +1,200 @@
+---
+import '../styles/globals.css';
+import Base from '@/layouts/Base.astro';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+
+export interface Props {
+  title: string;
+  description?: string;
+  hero?: string;
+  pubDate?: string;
+  author?: string;
+  tags?: string[];
+  metaTitle?: string;
+  keywords?: string[];
+}
+const { title, description = '', hero = '', pubDate = '', author = 'Axis Cabs', tags = [], metaTitle = '', keywords = [] } = Astro.props as Props;
+
+const site = (Astro.site?.toString() || 'https://axiscabs.com').replace(/\/$/, '');
+const url = new URL(Astro.url?.pathname || '/blog', site).href;
+const jsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: title,
+  description,
+  image: hero ? [hero.startsWith('http') ? hero : site + hero] : undefined,
+  author: { '@type': 'Organization', name: author },
+  datePublished: pubDate || undefined,
+  mainEntityOfPage: url,
+});
+---
+<Base title={metaTitle || `${title} | Axis Cabs Blog`} description={description} canonical={url} ogImage={hero}>
+  <Fragment slot="head">
+    {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
+  </Fragment>
+  <!-- Reading progress bar -->
+  <div id="ac-progress" class="fixed top-0 left-0 h-1 bg-orange-600 w-0 z-50"></div>
+  <Header />
+  <main class="ac-blog max-w-3xl mx-auto px-4 py-8">
+    {hero && (
+      <figure class="mb-6 rounded-2xl overflow-hidden shadow-soft ring-1 ring-black/5">
+        <img src={hero} alt={title} class="w-full h-64 md:h-80 object-cover" />
+      </figure>
+    )}
+    <article class="md-content ac-reveal-root">
+      <h1>{title}</h1>
+      <div class="ac-post-meta">
+        {pubDate && <time datetime={pubDate}>{pubDate}</time>}
+        <span id="ac-reading" aria-label="Estimated reading time"></span>
+        {tags.length ? <span class="tags">{tags.join(' • ')}</span> : null}
+      </div>
+      <div class="ac-share">
+        <button type="button" data-share="copy">Copy Link</button>
+        <a data-share="x" target="_blank" rel="noopener">Post on X</a>
+        <a data-share="wa" target="_blank" rel="noopener">WhatsApp</a>
+        <button type="button" data-share="sys">Share…</button>
+      </div>
+      {description && <p class="intro">{description}</p>}
+      <details class="ac-toc" open>
+        <summary>On this page</summary>
+        <nav id="ac-toc" aria-label="Table of contents"></nav>
+      </details>
+      <slot />
+    </article>
+    <div class="mt-8 flex items-center justify-between">
+      <div class="text-sm text-slate-600">
+        {pubDate && <time datetime={pubDate}>{pubDate}</time>} {tags.length ? ` • ${tags.join(' • ')}` : ''}
+      </div>
+      <a href="/packages" class="btn-primary">Plan a Trip</a>
+    </div>
+  </main>
+  <script type="application/ld+json" is:inline set:html={jsonLd} />
+  <Footer />
+
+  <!-- Sticky bottom CTA -->
+  <div id="ac-sticky-cta" class="fixed inset-x-0 bottom-3 z-40 flex justify-center pointer-events-none">
+    <div class="pointer-events-auto bg-white/90 backdrop-blur rounded-full shadow-soft ring-1 ring-black/5 px-3 py-2 flex items-center gap-2">
+      <a href="/packages" class="btn-primary px-4 py-2 rounded-full">Plan a Trip</a>
+      <a href="https://wa.me/919922333305?text=Hi%20Axis%20Cabs,%20I%20have%20a%20travel%20query." target="_blank" rel="noopener" class="btn-outline px-4 py-2 rounded-full">WhatsApp</a>
+      <button type="button" id="ac-sticky-cta-close" class="ml-1 text-slate-600 hover:text-slate-900" aria-label="Close">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true"><path fill="currentColor" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3 10.6 10.6 16.9 4.3z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <script is:inline>
+    (() => {
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Reading progress
+      const bar = document.getElementById('ac-progress');
+      const onScroll = () => {
+        const doc = document.documentElement;
+        const top = doc.scrollTop || document.body.scrollTop || 0;
+        const h = (doc.scrollHeight - doc.clientHeight) || 1;
+        const p = Math.max(0, Math.min(1, top / h));
+        if (bar) bar.style.width = (p * 100).toFixed(2) + '%';
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      // Reveal on view (headings, paragraphs, lists, images)
+      if (!reduce) {
+        const root = document.querySelector('.ac-reveal-root');
+        if (root) {
+          const targets = root.querySelectorAll('h2,h3,h4,p,ul,ol,hr,figure,img,blockquote');
+          targets.forEach((el) => el.classList.add('ac-reveal'));
+          const io = new IntersectionObserver((entries) => {
+            entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('in'); });
+          }, { threshold: 0.08, rootMargin: '0px 0px -10% 0px' });
+          targets.forEach((el) => io.observe(el));
+        }
+      }
+
+      // Reading time, TOC, and share links
+      const rootEl = document.querySelector('.ac-reveal-root');
+      const reading = document.getElementById('ac-reading');
+      const currentUrl = location.href;
+      if (rootEl) {
+        const text = rootEl.textContent || '';
+        const words = (text.trim().match(/\S+/g) || []).length;
+        const mins = Math.max(1, Math.round(words / 200));
+        if (reading) reading.textContent = `• ${mins} min read`;
+
+        const tocEl = document.getElementById('ac-toc');
+        if (tocEl) {
+          const hs = Array.from(rootEl.querySelectorAll('h2, h3'));
+          const toSlug = (s) => (s || '').toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').slice(0,80);
+          const items = hs.map((h) => { if (!h.id) h.id = toSlug(h.textContent || ''); return { id: h.id, text: h.textContent || '', level: h.tagName.toLowerCase() }; });
+          tocEl.innerHTML = items.filter(i=>i.id).map((i) => `<a class="lvl-${i.level}" href="#${i.id}">${i.text}</a>`).join('');
+        }
+
+        // Share buttons
+        const title = document.title; const txt = encodeURIComponent(title); const u = encodeURIComponent(currentUrl);
+        const x = document.querySelector('[data-share="x"]');
+        const wa = document.querySelector('[data-share="wa"]');
+        if (x) x.setAttribute('href', `https://twitter.com/intent/tweet?text=${txt}&url=${u}`);
+        if (wa) wa.setAttribute('href', `https://wa.me/?text=${txt}%20${u}`);
+
+        const copyBtn = document.querySelector('[data-share="copy"]');
+        copyBtn?.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(currentUrl); copyBtn.textContent = 'Copied!'; setTimeout(() => copyBtn.textContent = 'Copy Link', 1400); } catch {}
+        });
+        const sys = document.querySelector('[data-share="sys"]');
+        sys?.addEventListener('click', async () => {
+          if (navigator.share) { try { await navigator.share({ title: document.title, url: currentUrl }); } catch {} }
+          else { try { await navigator.clipboard.writeText(currentUrl); sys.textContent = 'Copied!'; setTimeout(() => sys.textContent = 'Share…', 1200); } catch {} }
+        });
+      }
+
+      // Sticky CTA visibility
+      const cta = document.getElementById('ac-sticky-cta');
+      const close = document.getElementById('ac-sticky-cta-close');
+      let dismissed = false;
+      close?.addEventListener('click', () => { dismissed = true; cta?.classList.add('hide'); });
+      const footer = document.querySelector('footer');
+      const showHide = () => {
+        if (!cta || dismissed) return;
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        const show = y > 400;
+        cta.classList.toggle('show', show);
+      };
+      window.addEventListener('scroll', showHide, { passive: true });
+      showHide();
+      if (footer && cta) {
+        const io2 = new IntersectionObserver((entries) => {
+          entries.forEach((e) => { if (e.isIntersecting) cta.classList.add('hide'); else if (!dismissed) cta.classList.remove('hide'); });
+        }, { threshold: 0 });
+        io2.observe(footer);
+      }
+    })();
+  </script>
+
+  <style is:global>
+    /* Reveal animations */
+    .ac-reveal { opacity: 0; transform: translateY(8px); transition: opacity .5s ease, transform .5s ease; }
+    .ac-reveal.in { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) {
+      .ac-reveal { opacity: 1; transform: none; transition: none; }
+    }
+    /* Sticky CTA states */
+    #ac-sticky-cta { opacity: 0; transform: translateY(8px); transition: opacity .3s ease, transform .3s ease; }
+    #ac-sticky-cta.show { opacity: 1; transform: translateY(0); }
+    #ac-sticky-cta.hide { opacity: 0; pointer-events: none; }
+
+    /* Blog header meta + share + toc */
+    .ac-post-meta { display:flex; flex-wrap:wrap; gap:.5rem .75rem; align-items:center; color:#475569; margin:.25rem 0 1rem; font-size:.9rem; }
+    .ac-post-meta .tags { color:#334155; }
+    .ac-share { display:flex; gap:.5rem; margin-bottom:1rem; }
+    .ac-share a, .ac-share button { font-size:.85rem; padding:.25rem .5rem; border:1px solid rgba(0,0,0,.08); border-radius:.5rem; background:#fff; color:#0f172a; }
+    .ac-share a:hover, .ac-share button:hover { background:#f8fafc; }
+    .ac-toc { margin: 1rem 0 1.25rem; }
+    .ac-toc[open] { padding:.75rem; border:1px solid rgba(0,0,0,.06); border-radius:.75rem; background:#fff; }
+    .ac-toc > summary { cursor:pointer; font-weight:600; color:#0f172a; }
+    #ac-toc { display:flex; flex-direction:column; gap:.25rem; margin-top:.5rem; }
+    #ac-toc a { color:#334155; text-decoration:none; font-size:.9rem; }
+    #ac-toc a:hover { text-decoration:underline; }
+    #ac-toc a.lvl-h3 { padding-left:.75rem; font-size:.85rem; }
+  </style>
+</Base>
