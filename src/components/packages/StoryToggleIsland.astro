@@ -8,42 +8,220 @@ interface Props {
   slug: string;
   visual: VisualItem[];
   narrative: string;
+  narrativeHtml?: string;
 }
-const { slug, visual, narrative } = Astro.props as Props;
+const { slug, visual, narrative, narrativeHtml } = Astro.props as Props;
 ---
-<div id={`story-${slug}`}
-  class="story-toggle">
+<div class="story-toggle" data-autoplay="true">
   <div class="flex gap-2 mb-4">
     <button type="button" class="px-3 py-1 rounded bg-orange-600 text-white" data-mode="visual">Visual highlights</button>
     <button type="button" class="px-3 py-1 rounded border" data-mode="narrative">Detailed narrative</button>
   </div>
   <div data-panel="visual">
-    <div class="grid sm:grid-cols-3 gap-2">
-      {visual.map((v, i) => (
-        <figure class="text-sm">
-          <img src={v.src} alt={v.alt} class="w-full h-40 object-cover rounded" loading={i===0?'eager':'lazy'} />
-          <figcaption class="mt-1 text-gray-600">{v.caption}</figcaption>
-        </figure>
-      ))}
+    <div class="relative">
+      <!-- fading edges -->
+      <div class="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white to-transparent"></div>
+      <div class="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent"></div>
+
+      <!-- Horizontal strip -->
+      <div class="ac-hstrip flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar py-1">
+        {visual.map((v, i) => (
+          <button type="button" class="group relative overflow-hidden rounded-xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500 min-w-[78%] sm:min-w-[48%] md:min-w-[32%] snap-start"
+                  data-visual-item data-index={String(i)} data-src={v.src} data-alt={v.alt} data-cap={v.caption}>
+            <img src={v.src} alt={v.alt} class="w-full h-48 sm:h-56 object-cover transition-transform duration-300 group-hover:scale-105" loading={i===0?'eager':'lazy'} />
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+              <div class="text-xs sm:text-sm text-white/95 drop-shadow">{v.caption}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <!-- Controls -->
+      <button type="button" class="absolute left-1 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full shadow p-2" data-hprev aria-label="Previous">
+        <svg viewBox="0 0 24 24" class="h-5 w-5 text-slate-700" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
+      <button type="button" class="absolute right-1 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full shadow p-2" data-hnext aria-label="Next">
+        <svg viewBox="0 0 24 24" class="h-5 w-5 text-slate-700" aria-hidden="true"><path fill="currentColor" d="M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+      </button>
     </div>
   </div>
   <div data-panel="narrative" class="hidden">
-    <div class="p-4 bg-gray-50 rounded text-sm text-gray-700 whitespace-pre-line">{narrative}</div>
+    {narrativeHtml ? (
+      <div class="p-4 bg-gray-50 rounded md-content" set:html={narrativeHtml} />
+    ) : (
+      <div class="p-4 bg-gray-50 rounded text-sm text-gray-700 whitespace-pre-line">{narrative}</div>
+    )}
   </div>
 </div>
 <script>
-  const root = document.getElementById(`story-${slug}`);
-  if (root) {
+  // Attach toggle behavior to all instances on the page without relying on server props
+  document.querySelectorAll('.story-toggle').forEach((root) => {
     const btns = root.querySelectorAll('button[data-mode]');
     const panels = root.querySelectorAll('[data-panel]');
-    btns.forEach(btn => {
+    btns.forEach((btn) => {
       btn.addEventListener('click', () => {
         const mode = btn.getAttribute('data-mode');
-        btns.forEach(b => b.classList.toggle('bg-orange-600', b===btn));
-        btns.forEach(b => b.classList.toggle('text-white', b===btn));
-        btns.forEach(b => b.classList.toggle('border', b!==btn));
-        panels.forEach(p => p.classList.toggle('hidden', p.getAttribute('data-panel') !== mode));
+        btns.forEach((b) => {
+          b.classList.toggle('bg-orange-600', b === btn);
+          b.classList.toggle('text-white', b === btn);
+          b.classList.toggle('border', b !== btn);
+        });
+        panels.forEach((p) => p.classList.toggle('hidden', p.getAttribute('data-panel') !== mode));
       });
     });
-  }
+
+    // ----- H STRIP CONTROLS -----
+    const strip = root.querySelector('.ac-hstrip');
+    const prev = root.querySelector('[data-hprev]');
+    const next = root.querySelector('[data-hnext]');
+    if (strip) {
+      const scrollByAmt = (dir) => {
+        const amt = Math.max(160, Math.floor(strip.clientWidth * 0.9));
+        strip.scrollBy({ left: dir * amt, behavior: 'smooth' });
+      };
+      prev && prev.addEventListener('click', () => scrollByAmt(-1));
+      next && next.addEventListener('click', () => scrollByAmt(1));
+    }
+
+    // ----- LIGHTBOX -----
+    const items = Array.from(root.querySelectorAll('[data-visual-item]')).map((el) => ({
+      src: el.getAttribute('data-src') || '',
+      alt: el.getAttribute('data-alt') || '',
+      cap: el.getAttribute('data-cap') || ''
+    }));
+    if (items.length) {
+      // Build overlay once
+      const overlay = document.createElement('div');
+      overlay.className = 'ac-lightbox fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80';
+      overlay.innerHTML = `
+        <button type="button" class="absolute top-4 right-4 text-white/90 bg-white/10 hover:bg-white/20 rounded-full p-2" data-close aria-label="Close">
+          <svg viewBox="0 0 24 24" class="h-6 w-6" aria-hidden="true"><path fill="currentColor" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3 10.6 10.6 16.9 4.3z"/></svg>
+        </button>
+        <button type="button" class="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 text-white/90 bg-white/10 hover:bg-white/20 rounded-full p-2" data-prev aria-label="Previous">
+          <svg viewBox="0 0 24 24" class="h-6 w-6" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+        </button>
+        <button type="button" class="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 text-white/90 bg-white/10 hover:bg-white/20 rounded-full p-2" data-next aria-label="Next">
+          <svg viewBox="0 0 24 24" class="h-6 w-6" aria-hidden="true"><path fill="currentColor" d="M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+        </button>
+        <div class="max-w-4xl w-full">
+          <img data-view class="w-full max-h-[75vh] object-contain rounded-lg shadow" alt="" />
+          <div data-cap class="mt-3 text-center text-white/90 text-sm"></div>
+        </div>
+      `;
+      overlay.style.display = 'none';
+      root.appendChild(overlay);
+
+      const imgEl = overlay.querySelector('[data-view]');
+      const capEl = overlay.querySelector('[data-cap]');
+      const btnClose = overlay.querySelector('[data-close]');
+      const btnPrev = overlay.querySelector('[data-prev]');
+      const btnNext = overlay.querySelector('[data-next]');
+      let idx = 0;
+      const show = (i) => {
+        idx = (i + items.length) % items.length;
+        const it = items[idx];
+        imgEl.src = it.src; imgEl.alt = it.alt; capEl.textContent = it.cap || '';
+        overlay.classList.remove('hidden'); overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      };
+      const hide = () => {
+        overlay.classList.add('hidden'); overlay.style.display = 'none';
+        document.body.style.overflow = '';
+      };
+      btnClose.addEventListener('click', () => { hide(); try { if (!prefersReduce) pausedAuto = false; } catch {} });
+      btnPrev.addEventListener('click', () => show(idx - 1));
+      btnNext.addEventListener('click', () => show(idx + 1));
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) { hide(); try { if (!prefersReduce) pausedAuto = false; } catch {} } });
+      window.addEventListener('keydown', (e) => {
+        if (overlay.classList.contains('hidden')) return;
+        if (e.key === 'Escape') { hide(); try { if (!prefersReduce) pausedAuto = false; } catch {} }
+        if (e.key === 'ArrowLeft') show(idx - 1);
+        if (e.key === 'ArrowRight') show(idx + 1);
+      });
+
+      // Touch swipe navigation (simple horizontal swipe)
+      let sx = 0, sy = 0, st = 0;
+      overlay.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length === 1) {
+          const t = e.touches[0];
+          sx = t.clientX; sy = t.clientY; st = Date.now();
+        }
+      }, { passive: true });
+      overlay.addEventListener('touchend', (e) => {
+        if (overlay.classList.contains('hidden')) return;
+        const dt = Date.now() - st;
+        const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+        if (!t) return;
+        const dx = t.clientX - sx;
+        const dy = t.clientY - sy;
+        const absX = Math.abs(dx), absY = Math.abs(dy);
+        const DIST = 40; // px
+        const TIME = 800; // ms
+        if (absX > absY && absX > DIST && dt < TIME) {
+          if (dx < 0) show(idx + 1); // swipe left -> next
+          else show(idx - 1);        // swipe right -> prev
+        }
+      }, { passive: true });
+
+      root.querySelectorAll('[data-visual-item]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const i = Number(el.getAttribute('data-index')) || 0;
+          try { pausedAuto = true; } catch {}
+          show(i);
+        });
+      });
+
+      // ----- AUTOPLAY (horizontal pan) -----
+      try {
+        const autoplayAttr = root.getAttribute('data-autoplay') || '';
+        const forceAuto = autoplayAttr === 'true' || autoplayAttr === 'force';
+        const forceNoAuto = autoplayAttr === 'false' || autoplayAttr === 'off';
+        const prefersReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let pausedAuto = forceNoAuto ? true : ((prefersReduce && !forceAuto) ? true : false);
+        const visualPanel = root.querySelector('[data-panel="visual"]');
+        const isPanelVisible = () => visualPanel && !visualPanel.classList.contains('hidden');
+        const isOverlayOpen = () => !overlay.classList.contains('hidden');
+
+        // Pause on user interaction
+        if (strip) {
+          strip.addEventListener('mouseenter', () => { pausedAuto = true; });
+          strip.addEventListener('mouseleave', () => { if (!forceNoAuto && (!prefersReduce || forceAuto)) pausedAuto = false; });
+          strip.addEventListener('touchstart', () => { pausedAuto = true; }, { passive: true });
+          strip.addEventListener('touchend', () => { if (!forceNoAuto && (!prefersReduce || forceAuto)) setTimeout(() => (pausedAuto = false), 800); }, { passive: true });
+        }
+
+        // Pause/resume when switching tabs (visual/narrative)
+        btns.forEach((b) => {
+          b.addEventListener('click', () => {
+            const mode = b.getAttribute('data-mode');
+            if (mode === 'visual') { if (!prefersReduce) pausedAuto = false; }
+            else { pausedAuto = true; }
+          });
+        });
+
+        let lastTs = 0;
+        const SPEED = 40; // px/sec
+        const step = (ts) => {
+          if (!lastTs) lastTs = ts;
+          const dt = (ts - lastTs) / 1000; lastTs = ts;
+          if (strip && !pausedAuto && isPanelVisible() && !isOverlayOpen()) {
+            const max = Math.max(0, strip.scrollWidth - strip.clientWidth);
+            if (max > 0) {
+              let next = strip.scrollLeft + SPEED * dt;
+              if (next >= max - 2) next = 0;
+              strip.scrollLeft = next;
+            }
+          }
+          requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      } catch {}
+    }
+  });
+  
 </script>
+
+<style is:global>
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>

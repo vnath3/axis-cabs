@@ -14,6 +14,7 @@ interface Props {
   fnBase?: string;
   speed?: number;               // px/sec
   aggregate?: ReviewsAggregate; // { average: number; count: number }
+  items?: Array<Record<string, any>>; // optional static items
 }
 
 const BRAND_NAME_DEFAULT = "Axis Cabs";
@@ -24,7 +25,8 @@ const {
   brand = BRAND_NAME_DEFAULT,
   fnBase = FN_BASE_DEFAULT,
   speed = SPEED_PX_PER_SEC_DEFAULT,
-  aggregate
+  aggregate,
+  items
 } = Astro.props;
 
 // Absolute site (for @id linking and canonical URLs)
@@ -73,6 +75,9 @@ const reviewsJsonLd = aggregate
 
     <!-- Server-rendered JSON-LD (baseline); client JS will update this node if fresher data is fetched -->
     <script id="ac-reviews-jsonld" type="application/ld+json" is:inline set:html={reviewsJsonLd} />
+    {items && items.length > 0 && (
+      <script id="ac-reviews-items" type="application/json" is:inline set:html={JSON.stringify(items)} />
+    )}
   </div>
 </section>
 
@@ -104,6 +109,7 @@ const reviewsJsonLd = aggregate
   const wrap   = document.getElementById('ac-marquee-wrap');
   const runner = document.getElementById('ac-marquee-runner');
   const jsonLdEl = document.getElementById('ac-reviews-jsonld');
+  const itemsEl  = document.getElementById('ac-reviews-items');
 
   let aggregate = { count: 0, average: 0 };
 
@@ -225,7 +231,23 @@ const reviewsJsonLd = aggregate
   };
 
   (async () => {
-    const items = await fetchAllReviews();
+    let items = null;
+    // Prefer statically provided items if available
+    if (itemsEl && itemsEl.textContent) {
+      try {
+        const parsed = JSON.parse(itemsEl.textContent);
+        if (Array.isArray(parsed) && parsed.length) {
+          items = parsed.map((r) => ({ ...r, comment: r.comment || r.review_text || r.text || '' }));
+          if (!aggregate || !aggregate.count) {
+            const sum = items.reduce((s, r) => s + (Number(r.rating) || 5), 0);
+            aggregate = { count: items.length, average: items.length ? sum / items.length : 0 };
+          }
+        }
+      } catch {}
+    }
+    if (!items) {
+      items = await fetchAllReviews();
+    }
 
     if (!items || !items.length) {
       if (!runner.innerHTML) {

@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -10,7 +10,7 @@ body { @apply bg-bg text-text antialiased; }
 /* Card */
 .card { @apply rounded-2xl bg-white shadow-soft p-6; }
 
-/* ===== Axis Cabs — Design Tokens ===== */
+/* ===== Axis Cabs â€” Design Tokens ===== */
 :root {
   /* Brand */
   --ac-brand: #ea580c;           /* orange-600 */
@@ -29,7 +29,7 @@ body { @apply bg-bg text-text antialiased; }
 .h3 { @apply text-xl md:text-2xl font-semibold; color: var(--ac-text); }
 .p  { @apply text-sm md:text-base; color: var(--ac-text-muted); }
 
-/* ===== Buttons — single source of truth =====
+/* ===== Buttons â€” single source of truth =====
    Backward compatible: base styles apply to .btn and to variant classes
    so old markup that only uses .btn-primary keeps rounded corners/padding.
 */
@@ -61,4 +61,26 @@ body { @apply bg-bg text-text antialiased; }
 }
 .btn-outline:hover { @apply bg-gray-50; }
 
-/* 🔻 Remove any older .btn-primary that used bg-primary to avoid conflicts */
+/* ðŸ”» Remove any older .btn-primary that used bg-primary to avoid conflicts */
+
+/* Markdown content styling for narrative blocks */
+.md-content { @apply text-base leading-relaxed text-slate-700; }
+.md-content h1 { @apply text-2xl md:text-3xl font-bold text-slate-900 mb-4; }
+.md-content h2 { @apply text-xl md:text-2xl font-semibold text-slate-900 mt-6 mb-3; }
+.md-content h3 { @apply text-lg md:text-xl font-semibold text-slate-900 mt-5 mb-2; }
+.md-content p  { @apply mb-3; }
+.md-content ul { @apply list-disc pl-5 mb-3; }
+.md-content ol { @apply list-decimal pl-5 mb-3; }
+.md-content li { @apply mb-1; }
+.md-content hr { @apply my-6 border-gray-200; }
+.md-content strong { @apply font-semibold text-slate-900; }
+.md-content a { @apply underline; }
+/* ===== Packages page typography (scoped) ===== */
+.ac-pkg { @apply font-sans; }
+.ac-pkg h1 { @apply text-3xl md:text-4xl font-bold text-slate-900; }
+.ac-pkg h2 { @apply text-xl md:text-2xl font-bold text-slate-900; }
+.ac-pkg h3 { @apply text-lg md:text-xl font-semibold text-slate-900; }
+.ac-pkg p  { @apply text-base text-slate-700; }
+/* Ensure hero text stays white over image overlay */
+.ac-pkg .pkg-hero h1 { @apply text-white; }
+.ac-pkg .pkg-hero p  { @apply text-white; }
