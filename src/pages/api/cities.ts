@@ -5,15 +5,14 @@
 */
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimitTry } from '../../lib/rateLimit';
 
 const SUPABASE_URL = import.meta.env.SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE = import.meta.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, { auth: { persistSession: false } });
 
-/* ---- tiny in-file cache & rate-limit (per instance) ---- */
-type Stamp = number;
+/* ---- tiny in-file cache (per instance) ---- */
 const cache = new Map<string, { v: { city: string }[]; exp: number }>();
-const hits: Map<string, Stamp[]> = new Map();
 
 function getIP(req: Request) {
   const h = req.headers;
@@ -21,15 +20,6 @@ function getIP(req: Request) {
   if (xff) return xff.split(',')[0].trim();
   return h.get('x-real-ip') || h.get('x-nf-client-connection-ip') || '';
 }
-function rlTry(key: string, limit = 60, windowMs = 60_000) {
-  const now = Date.now(), start = now - windowMs;
-  let q = hits.get(key) || [];
-  while (q.length && q[0] < start) q.shift();
-  const ok = q.length < limit;
-  if (ok) { q.push(now); hits.set(key, q); }
-  return { ok, retryAfter: ok ? 0 : Math.ceil(((q[0] ?? now) + windowMs - now) / 1000) };
-}
-
 export const GET: APIRoute = async ({ request, url }) => {
   const q = (url.searchParams.get('q') || '').trim();
   if (q.length < 1) {
@@ -40,11 +30,11 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   // Rate limit per IP
   const ip = getIP(request) || 'anon';
-  const rl = rlTry(`cities:${ip}`, 60, 60_000);
-  if (!rl.ok) {
-    return new Response(JSON.stringify({ ok: false, error: 'rate-limited', retry_after: rl.retryAfter }), {
+  const { ok, retryAfterSec } = rateLimitTry(`cities:${ip}`, 60, 60_000);
+  if (!ok) {
+    return new Response(JSON.stringify({ ok: false, error: 'rate-limited', retry_after: retryAfterSec }), {
       status: 429,
-      headers: { 'content-type': 'application/json', 'Retry-After': String(rl.retryAfter) },
+      headers: { 'content-type': 'application/json', 'Retry-After': String(retryAfterSec) },
     });
   }
 
