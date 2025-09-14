@@ -204,7 +204,8 @@ const { slug, visual, narrative, narrativeHtml } = Astro.props as Props;
         const step = (ts) => {
           if (!lastTs) lastTs = ts;
           const dt = (ts - lastTs) / 1000; lastTs = ts;
-          if (strip && !pausedAuto && isPanelVisible() && !isOverlayOpen()) {
+          const visible = document.visibilityState !== 'hidden';
+          if (strip && !pausedAuto && isPanelVisible() && !isOverlayOpen() && visible) {
             const max = Math.max(0, strip.scrollWidth - strip.clientWidth);
             if (max > 0) {
               let next = strip.scrollLeft + SPEED * dt;
@@ -215,6 +216,10 @@ const { slug, visual, narrative, narrativeHtml } = Astro.props as Props;
           requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') pausedAuto = true;
+          else if (!forceNoAuto && (!prefersReduce || forceAuto)) pausedAuto = false;
+        });
       } catch {}
     }
   });
