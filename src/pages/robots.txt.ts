@@ -1,16 +1,22 @@
 import type { APIRoute } from 'astro';
 
-export const GET: APIRoute = () => {
-// If you ever want to block staging, add a condition for *.netlify.app here.
-  const body = [
-'User-agent: *',
-'Allow: /',
-'',
-'Sitemap: https://axiscabs.com/sitemap.xml',
-''
-].join('\n');
+function baseUrl(site?: URL): string {
+  const env = process.env.SITE || process.env.URL || '';
+  return (env || site?.toString() || 'https://axiscabs.com').replace(/\/$/, '');
+}
 
-return new Response(body, {
-headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-});
+export const GET: APIRoute = ({ site }) => {
+  const base = baseUrl(site);
+  const body = [
+    'User-agent: *',
+    'Allow: /',
+    '',
+    `Sitemap: ${base}/sitemap.xml`,
+    '',
+  ].join('\n');
+
+  return new Response(body, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
 };
+
