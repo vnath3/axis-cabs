@@ -5,14 +5,13 @@
 */
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimitTry } from '../../lib/rateLimit';
 
 const SUPABASE_URL = import.meta.env.SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE = import.meta.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, { auth: { persistSession: false } });
 
-type Stamp = number;
 const cache = new Map<string, { v: any; exp: number }>();
-const hits: Map<string, Stamp[]> = new Map();
 
 function getIP(req: Request) {
   const h = req.headers;
@@ -20,25 +19,16 @@ function getIP(req: Request) {
   if (xff) return xff.split(',')[0].trim();
   return h.get('x-real-ip') || h.get('x-nf-client-connection-ip') || '';
 }
-function rlTry(key: string, limit = 20, windowMs = 60_000) {
-  const now = Date.now(), start = now - windowMs;
-  let q = hits.get(key) || [];
-  while (q.length && q[0] < start) q.shift();
-  const ok = q.length < limit;
-  if (ok) { q.push(now); hits.set(key, q); }
-  return { ok, retryAfter: ok ? 0 : Math.ceil(((q[0] ?? now) + windowMs - now) / 1000) };
-}
-
 function norm(s: string) { return (s || '').trim().toLowerCase(); }
 function title(s: string) { return s.replace(/\b\w/g, (m) => m.toUpperCase()); }
 
 export const GET: APIRoute = async ({ request, url }) => {
   const ip = getIP(request) || 'anon';
-  const rl = rlTry(`fare:${ip}`, 20, 60_000);
-  if (!rl.ok) {
-    return new Response(JSON.stringify({ ok: false, error: 'rate-limited', retry_after: rl.retryAfter }), {
+  const { ok, retryAfterSec } = rateLimitTry(`fare:${ip}`, 20, 60_000);
+  if (!ok) {
+    return new Response(JSON.stringify({ ok: false, error: 'rate-limited', retry_after: retryAfterSec }), {
       status: 429,
-      headers: { 'content-type': 'application/json', 'Retry-After': String(rl.retryAfter) },
+      headers: { 'content-type': 'application/json', 'Retry-After': String(retryAfterSec) },
     });
   }
 
