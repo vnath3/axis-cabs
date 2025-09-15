@@ -1,0 +1,72 @@
+﻿        const toRad = d=>d*Math.PI/180, R=6371;
+        const dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
+        const s=Math.sin(dLat/2)**2 + Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLng/2)**2;
+        return Math.round(R*2*Math.asin(Math.sqrt(s)));
+      };
+      const $ = s=>document.querySelector(s);
+
+      // --- Map ---
+      const map = L.map('map',{scrollWheelZoom:false}).setView([20.0,75.3], 7);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'\u00A9 OpenStreetMap'}).addTo(map);
+      const markers={};
+      GEMS.forEach(g=>{
+        markers[g.id]=L.marker([g.lat,g.lng]).addTo(map).bindPopup(`<b>${g.name}</b><br><small>${g.where}</small>`);
+      });
+      function focus(id){ const m=markers[id]; if(!m) return; map.setView(m.getLatLng(), 10, {animate:true}); m.openPopup(); }
+
+      // --- State ---
+      let origin = {lat:19.876, lng:75.343}; // Aurangabad default
+      let tag='all', query='';
+
+      // --- Render list ---
+      function renderList(){
+        const wrap = $('#nearbyList'); wrap.innerHTML='';
+        const data = GEMS
+          .filter(g=> tag==='all' || g.tags.includes(tag))
+          .filter(g=> !query || (g.name+g.where+g.teaser).toLowerCase().includes(query.toLowerCase()))
+          .map(g=> ({...g, dist: km(origin,{lat:g.lat,lng:g.lng})}))
+          .sort((a,b)=> a.dist-b.dist);
+
+        data.forEach(g=>{
+          const btn = document.createElement('button');
+          btn.className = "w-full text-left p-3 rounded-xl border border-gray-100 hover:bg-gray-50";
+          btn.innerHTML = `
+            <div class="flex gap-3 items-center">
+              <div class="w-12 h-12 rounded-lg bg-sky-100 grid place-items-center font-bold text-sky-700">${g.dist}<span class="text-[10px] font-normal ml-0.5">km</span></div>
+              <div class="flex-1">
+                <p class="font-medium">${g.name}</p>
+                <p class="text-xs text-gray-500">${g.where} â€¢ ${g.tags.join(' Â· ')}</p>
+                <p class="text-xs text-gray-600 mt-1">${g.teaser}</p>
+              </div>
+              <a target="_blank" class="px-3 py-1.5 rounded-lg btn-primary text-sm"
+                 href="${WA_BASE}?text=${encodeURIComponent('Plan route to: '+g.name+' ('+g.dist+'km)')}">Plan</a>
+            </div>`;
+          btn.addEventListener('click', e=>{
+            if(e.target.tagName.toLowerCase()==='a') return;
+            focus(g.id);
+          });
+          wrap.appendChild(btn);
+        });
+      }
+
+      // --- Origin controls ---
+      $('#originSelect').addEventListener('change', e=>{
+        const [lat,lng]=e.target.value.split(',').map(Number);
+        origin={lat,lng}; map.setView([lat,lng], 8); renderList();
+        const cta = document.getElementById('ctaWA');
+        if (cta) cta.href = WA_BASE+"?text="+encodeURIComponent(`Hidden Gems near ${lat},${lng}`);
+      });
+      $('#useLoc').addEventListener('click', ()=>{
+        if(!navigator.geolocation){ alert('Geolocation not supported'); return; }
+        navigator.geolocation.getCurrentPosition(pos=>{
+          origin={lat:pos.coords.latitude, lng:pos.coords.longitude};
+          map.setView([origin.lat,origin.lng], 9); renderList();
+          const cta = document.getElementById('ctaWA');
+          if (cta) cta.href = WA_BASE+"?text="+encodeURIComponent(`Hidden Gems near my location (${origin.lat.toFixed(3)},${origin.lng.toFixed(3)})`);
+        }, ()=>alert('Could not get location'));
+      });
+
+      // --- Filters/Search ---
+      document.querySelectorAll('.fbtn').forEach(b=> b.addEventListener('click', ()=>{ tag=b.dataset.tag; renderList(); }));
+      document.getElementById('q').addEventListener('input', e=>{ query=e.target.value||''; renderList(); });
+

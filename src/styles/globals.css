@@ -102,3 +102,34 @@ body { @apply bg-bg text-text antialiased font-sans; }
 .ac-blog .md-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
 .ac-blog .md-content th, .ac-blog .md-content td { padding: .5rem .75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
 .ac-blog .md-content thead th { color: #0f172a; font-weight: 600; }
+
+/* Reusable chips (used by filters) */
+.chip { @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-50 text-slate-700 ring-1 ring-gray-200 hover:bg-gray-100; }
+.chip-active { @apply bg-slate-900 text-white ring-slate-900; }
+/* Also honor aria-pressed for dynamic toggles */
+.chip[aria-pressed="true"] { @apply bg-slate-900 text-white ring-slate-900; }
+
+/* Leaflet popup image sizing */
+.leaflet-popup-content .gem-img {
+  width: 180px; height: 120px; object-fit: cover; border-radius: 0.5rem; display: block; margin-bottom: 0.375rem;
+}
+
+/* Minimal Leaflet CSS fallback so maps render even if CDN CSS fails */
+.leaflet-container { position: relative; overflow: hidden; outline: 0; }
+.leaflet-pane, .leaflet-tile, .leaflet-marker-icon, .leaflet-marker-shadow,
+.leaflet-zoom-box, .leaflet-image-layer, .leaflet-overlay-pane svg,
+.leaflet-marker-pane img, .leaflet-shadow-pane img, .leaflet-tile-pane img { position: absolute; left: 0; top: 0; }
+.leaflet-pane { z-index: 400; }
+.leaflet-tile-pane { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane { z-index: 500; }
+.leaflet-marker-pane { z-index: 600; }
+.leaflet-popup-pane { z-index: 700; }
+.leaflet-control { position: absolute; z-index: 800; pointer-events: auto; }
+.leaflet-top { top: 0; }
+.leaflet-left { left: 0; }
+.leaflet-right { right: 0; }
+.leaflet-bottom { bottom: 0; }
+.leaflet-control-zoom { margin: 10px; }
+.leaflet-control-zoom a { width: 28px; height: 28px; line-height: 28px; display: block; text-align: center; background: #fff; border: 1px solid #d1d5db; color: #111827; border-radius: 6px; }
+.leaflet-control-attribution { margin: 0; padding: 0 6px; background: rgba(255,255,255,.8); font-size: 12px; }

@@ -1,0 +1,103 @@
+﻿---
+import '../../styles/globals.css';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+import Analytics from '@/components/Analytics.astro';
+
+// Use the configured WhatsApp number consistently
+const WA = (import.meta.env.PUBLIC_WHATSAPP_NUMBER || '+919922333305').replace(/\D/g, '');
+const WA_BASE = `https://wa.me/${WA}`;
+---
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hidden Gems â€” Nearby Explorer | Axis Cabs</title>
+    <meta name="description" content="Discover lesser-known forts, crater lakes, and cave temples near you. Pick your origin, filter by interest, preview on map, and plan on WhatsApp." />
+    <link rel="icon" href="/favicon.svg" />
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <Analytics />
+  </head>
+  <body>
+    <Header />
+
+    <!-- HERO -->
+    <header class="relative overflow-hidden">
+      <img
+        class="absolute inset-0 w-full h-full object-cover brightness-75"
+        src="https://images.unsplash.com/photo-1526779259212-939e64788e3c?q=80&w=1800&auto=format&fit=crop"
+        alt="Hidden Gems India"
+      />
+      <div class="relative z-10 bg-gradient-to-b from-black/40 to-black/20">
+        <div class="mx-auto max-w-6xl px-4 py-16 md:py-24 text-white text-center">
+          <p class="uppercase tracking-widest text-xs md:text-sm text-white/80">Axis Cabs Curations</p>
+          <h1 class="text-4xl md:text-6xl font-extrabold leading-tight">Hidden Gems, Near You</h1>
+          <p class="mt-3 max-w-2xl mx-auto text-white/90">
+            Set your origin, discover lesser-known forts, crater lakes & cave temples. Click to preview on map. Book in one tap.
+          </p>
+          <div class="mt-6 flex flex-wrap justify-center gap-3">
+            <a href="#nearby" class="btn-outline">Explore Nearby</a>
+            <a href={`${WA_BASE}?text=${encodeURIComponent('Hi Axis Cabs, help me plan a Hidden Gems tour')}`} target="_blank" class="btn-primary">WhatsApp Plan</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- INTRO STRIP -->
+    <div class="bg-gradient-to-r from-sky-600 to-emerald-600 text-white">
+      <div class="mx-auto max-w-6xl px-4 py-6 text-center md:text-left">
+        <h2 class="text-xl md:text-2xl font-bold">Hidden Gems â€” Nearby</h2>
+        <p class="text-white/90">Pick your starting point. Weâ€™ll sort the gems by distance. Click any item to preview on the map.</p>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <section id="nearby" data-wa-base={WA_BASE} class="mx-auto max-w-6xl px-4 py-6 grid gap-6 md:grid-cols-3 items-start">
+      <!-- Controls + Nearby list -->
+      <aside class="space-y-4 md:col-span-1">
+        <div class="card shadow-soft">
+          <h3 class="font-semibold">Your origin</h3>
+          <div class="mt-3 grid grid-cols-1 gap-2">
+            <select id="originSelect" class="w-full px-3 py-2 rounded-lg border">
+              <option value="19.876,75.343">Aurangabad</option>
+              <option value="18.520,73.856">Pune</option>
+              <option value="19.076,72.877">Mumbai</option>
+            </select>
+            <button id="useLoc" class="btn-primary">Use my location</button>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2 items-center">
+            <span class="text-sm text-gray-600">Filter:</span>
+            <button class="fbtn px-3 py-1 rounded-full bg-gray-200 text-sm" data-tag="all">All</button>
+            <button class="fbtn px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-sm" data-tag="heritage">Heritage</button>
+            <button class="fbtn px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm" data-tag="nature">Nature</button>
+            <button class="fbtn px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-sm" data-tag="photogenic">Photogenic</button>
+          </div>
+        </div>
+
+        <div class="card shadow-soft">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold">Nearby (sorted)</h4>
+            <input id="q" placeholder="Searchâ€¦" class="px-3 py-2 rounded-lg border w-40" />
+          </div>
+          <div id="nearbyList" class="mt-3 space-y-3 max-h-[520px] overflow-auto pr-1"></div>
+        </div>
+      </aside>
+
+      <!-- Map -->
+      <div class="card shadow-soft overflow-hidden h-[680px] p-0 md:col-span-2">
+        <div id="map" class="w-full h-full min-h-[400px]"></div>
+      </div>
+    </section>
+
+    <!-- Sticky mobile CTA -->
+    <div class="fixed bottom-0 left-0 right-0 md:hidden z-40">
+      <div class="mx-3 mb-3 card grid grid-cols-2 overflow-hidden">
+        <a href={`tel:+${WA}`} class="py-3 text-center font-semibold hover:bg-gray-50">Call</a>
+        <a id="ctaWA" target="_blank" class="py-3 text-center font-semibold btn-primary">WhatsApp</a>
+      </div>
+    </div>
+
+    <!-- Leaflet JS and page logic -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+    
