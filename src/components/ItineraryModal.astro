@@ -15,9 +15,9 @@
   @media (min-width: 640px) { .row.two { grid-template-columns: 1fr 1fr; } }
   label { @apply block text-xs font-medium text-gray-600 mb-1; }
   input, select, textarea { @apply w-full rounded-lg border border-gray-200 px-3 py-2 text-sm; }
-  .steps { @apply flex gap-1 mb-2; }
-  .dot { @apply w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 font-semibold; }
-  .dot.on { @apply bg-gray-900 text-white; }
+  /* Progress bar (universal brand) */
+  .prog { @apply w-full h-1 bg-gray-200 rounded-full overflow-hidden mb-2; }
+  .prog .bar { height: 100%; width: var(--iw-prog, 0%); background-color: var(--ac-brand); transition: width .3s ease; }
   .cars { @apply flex gap-2 my-2; }
   .car { @apply flex-1 border border-gray-200 rounded-lg p-2 text-center cursor-pointer; }
   .car.on { box-shadow: inset 0 0 0 2px var(--ac-brand); border-color: var(--ac-brand); }
@@ -37,11 +37,7 @@
         <button class="btn btn-ghost" data-close aria-label="Close">✕</button>
       </div>
 
-      <div class="steps">
-        <div class="dot on" data-step-dot="1">1</div>
-        <div class="dot" data-step-dot="2">2</div>
-        <div class="dot" data-step-dot="3">3</div>
-      </div>
+      <div class="prog" aria-hidden="true"><div class="bar" id="iw-prog"></div></div>
 
       <div class="space-y-4">
         <div data-step="1">
@@ -66,9 +62,9 @@
             </div>
           </div>
           
-          <div class="flex items-center gap-3 mt-2">
-            <button class="btn btn-primary" id="iw-next-1">Next</button>
-            <span class="text-xs text-gray-500">Tip: Add 1–3 stops, comma-separated.</span>
+          <div class="flex items-center justify-center gap-3 mt-2">
+            <button class="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed" id="iw-next-1" disabled aria-disabled="true">Next</button>
+            <span class="text-xs text-gray-500">Tip: You can add up to 3 stops, separated by commas.</span>
           </div>
         </div>
 
@@ -80,7 +76,7 @@
             <div class="car" data-car="traveller">Tempo</div>
           </div>
           <div class="est" id="iw-est">Pick a car to see estimate…</div>
-          <div class="flex items-center gap-3 mt-2">
+          <div class="flex items-center justify-center gap-3 mt-2">
             <button class="btn btn-ghost" id="iw-prev-2">Back</button>
             <button class="btn btn-primary" id="iw-next-2">Next</button>
           </div>
@@ -100,14 +96,14 @@
           </div>
           <div class="row mt-2">
             <div>
-              <label>Email (optional)</label>
+              <label>Email</label>
               <input id="iw-email" type="email" placeholder="name@example.com" />
               <div class="text-xs text-gray-500 mt-1">We’ll send your complete itinerary over email.</div>
             </div>
           </div>
-          <div class="flex items-center gap-3 mt-2">
+          <div class="flex items-center justify-center gap-3 mt-2">
             <button class="btn btn-ghost" id="iw-prev-3">Back</button>
-            <button class="btn btn-primary" id="iw-submit">Submit</button>
+            <button class="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed" id="iw-submit" disabled aria-disabled="true">Submit</button>
           </div>
           <div class="note" id="iw-note"></div>
         </div>
@@ -136,10 +132,24 @@
     let step = 1;
     const dots = sheet ? qsa('[data-step-dot]', sheet) : [];
     const views = sheet ? qsa('[data-step]', sheet) : [];
+    const progEl = sheet ? sheet.querySelector('#iw-prog') : null;
     const setStep = (n) => {
       step = n;
       views.forEach(v => { v.hidden = String(v.getAttribute('data-step')) !== String(n); });
       dots.forEach(d => d.classList.toggle('on', d.getAttribute('data-step-dot') === String(n)));
+      if (progEl && progEl.style) {
+        const pct = Math.max(0, Math.min(100, Math.round(((n - 1) / 2) * 100)));
+        progEl.style.width = pct + '%';
+      }
+      if (n === 2) {
+        try {
+          qsa('.car', sheet).forEach(c => c.classList.remove('on'));
+          const sedan = sheet?.querySelector('.car[data-car="sedan"]');
+          if (sedan) sedan.classList.add('on');
+          state.vehicle = 'sedan';
+          refreshEstimate();
+        } catch {}
+      }
     };
 
     const state = { origin:'', date:'', stops:[], pax:2, vehicle:'sedan', result:null };
@@ -166,12 +176,29 @@
       });
     })();
 
+    // Step 1: enable Next only when origin, date, and at least 1 stop are entered
+    const next1 = qs('#iw-next-1', sheet);
+    function validateStep1(){
+      const o = (origin?.value||'').trim();
+      const d = (date?.value||'').trim();
+      const s = (stops?.value||'').split(',').map(x=>x.trim()).filter(Boolean);
+      const ok = !!o && !!d && s.length > 0;
+      if (next1) {
+        if (ok) { next1.removeAttribute('disabled'); next1.setAttribute('aria-disabled','false'); }
+        else { next1.setAttribute('disabled','true'); next1.setAttribute('aria-disabled','true'); }
+      }
+    }
+    origin?.addEventListener('input', validateStep1);
+    date?.addEventListener('change', validateStep1);
+    stops?.addEventListener('input', validateStep1);
+    validateStep1();
+
     qs('#iw-next-1', sheet)?.addEventListener('click', () => {
       state.origin = (origin?.value||'').trim();
       state.date = (date?.value||'').trim();
       state.stops = (stops?.value||'').split(',').map(s=>s.trim()).filter(Boolean);
       state.pax = Math.max(1, Number(pax?.value||1));
-      if (!state.origin || state.stops.length === 0){ alert('Please enter origin and at least one stop.'); return; }
+      if (!state.origin || !state.date || state.stops.length === 0){ alert('Please enter origin, date and at least one stop.'); return; }
       setStep(2);
     });
     qs('#iw-prev-2', sheet)?.addEventListener('click', () => setStep(1));
@@ -201,7 +228,7 @@
       const d = state.result;
       const lines = [];
       lines.push('Origin: ' + d.meta.origin);
-      lines.push('Stops: ' + state.stops.join(' → '));
+      lines.push('Stops: ' + state.stops.join(' -> ' ));
       if (state.date) lines.push('Date: ' + state.date);
       lines.push('Vehicle: ' + state.vehicle.toUpperCase() + ', Pax: ' + state.pax);
       lines.push('Distance: ~' + Math.round(d.totals.km) + ' km');
@@ -224,11 +251,32 @@
     });
     qs('#iw-prev-3', sheet)?.addEventListener('click', () => setStep(2));
 
+    // Enable Submit only when name, WhatsApp, and email are valid
+    const submitBtn = qs('#iw-submit', sheet);
+    const nameEl = qs('#iw-name', sheet);
+    const phoneEl = qs('#iw-phone', sheet);
+    const emailEl = qs('#iw-email', sheet);
+    const isEmail = (s) => /.+@.+\..+/.test(String(s||''));
+    function validateStep3(){
+      const nameV = (nameEl?.value||'').trim();
+      const phoneV = (phoneEl?.value||'').replace(/\D/g,'');
+      const emailV = (emailEl?.value||'').trim();
+      const ok = !!nameV && phoneV.length >= 8 && isEmail(emailV);
+      if (submitBtn) {
+        if (ok) { submitBtn.removeAttribute('disabled'); submitBtn.setAttribute('aria-disabled','false'); }
+        else { submitBtn.setAttribute('disabled','true'); submitBtn.setAttribute('aria-disabled','true'); }
+      }
+    }
+    nameEl?.addEventListener('input', validateStep3);
+    phoneEl?.addEventListener('input', validateStep3);
+    emailEl?.addEventListener('input', validateStep3);
+    validateStep3();
+
     qs('#iw-submit', sheet)?.addEventListener('click', async () => {
-      const name = (qs('#iw-name', sheet)?.value||'').trim();
-      const phone = (qs('#iw-phone', sheet)?.value||'').replace(/\D/g,'');
-      const email = (qs('#iw-email', sheet)?.value||'').trim();
-      if (!name || phone.length < 8) { alert('Please enter your name and a valid WhatsApp number.'); return; }
+      const name = (nameEl?.value||'').trim();
+      const phone = (phoneEl?.value||'').replace(/\\D/g,'');
+      const email = (emailEl?.value||'').trim();
+      if (!name || phone.length < 8 || !isEmail(email)) { alert('Please enter your name, a valid WhatsApp number, and email.'); return; }
       const d = state.result; if (!d) { alert('Estimate missing.'); return; }
       // Build notes with plan included (for CRM)
       const lines = [];
@@ -250,7 +298,17 @@
         const payload = { name, whatsapp: phone, email, from: d.meta.origin, to: state.stops[state.stops.length-1], vehicle: state.vehicle, pax: String(state.pax), date: state.date, notes, page: location.pathname };
         const res = await fetch('/api/leads-submit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
         const ok = res.ok && (await res.json().catch(()=>({}))).ok;
-        if (note) { note.textContent = ok ? 'Saved your request ✔' : 'Could not save lead, but WhatsApp will still open.'; note.className = 'note ' + (ok ? 'ok' : 'err'); }
+        if (note) {
+          if (ok) {
+            note.textContent = 'Saved your request ✔';
+            note.className = 'note ok';
+            try { hide(); } catch {}
+          } else {
+            // Suppress non-blocking error message; keep UI quiet
+            note.textContent = '';
+            note.className = 'note';
+          }
+        }
       } catch { if (note) { note.textContent = 'Could not save lead (network).'; note.className = 'note err'; } }
 
       // WhatsApp summary
@@ -258,13 +316,13 @@
         'Hi Axis Cabs! I need an itinerary quote:',
         'Name: ' + name,
         'Phone: ' + phone,
-        (email ? ('Email: ' + email) : null),
+        'Email: ' + email,
         'Origin: ' + state.result.meta.origin,
-        'Stops: ' + state.stops.join(' → '),
+        'Stops: ' + state.stops.join(' -> ' ),
         'Vehicle: ' + state.vehicle.toUpperCase() + ', Pax: ' + state.pax,
         'Date: ' + (state.date || 'flexible'),
-        'Estimate: ₹' + Number(state.result.fare.low).toLocaleString('en-IN') + ' - ₹' + Number(state.result.fare.high).toLocaleString('en-IN')
-      ].filter(Boolean);
+        'Estimate: Rs ' + Number(state.result.fare.low).toLocaleString('en-IN') + ' - Rs ' + Number(state.result.fare.high).toLocaleString('en-IN')
+      ];
       // add short plan preview in WA text
       try {
         const p = state.result.plan || [];

@@ -307,6 +307,34 @@ const defaultTo = '';
     }
   });
 
+  // ---- Auto-recalculate on vehicle/trip change after first estimate ----
+  let hasEstimatedOnce = false;
+  try {
+    const mo = new MutationObserver(() => {
+      const enabled = !bookBtn.hasAttribute('disabled') && bookBtn.getAttribute('aria-disabled') !== 'true';
+      if (enabled) hasEstimatedOnce = true;
+    });
+    mo.observe(bookBtn, { attributes: true, attributeFilter: ['disabled', 'aria-disabled'] });
+  } catch {}
+
+  const hasCities = () => {
+    const v: any = Object.fromEntries(new FormData(form) as any);
+    return String(v.from || '').trim().length > 0 && String(v.to || '').trim().length > 0;
+  };
+
+  let recalcTimer: number | null = null;
+  const scheduleRecalc = () => {
+    if (!hasEstimatedOnce || !hasCities()) return;
+    if (recalcTimer) window.clearTimeout(recalcTimer);
+    recalcTimer = window.setTimeout(() => {
+      recalcTimer = null;
+      try { (form as any).requestSubmit ? (form as any).requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true })); } catch {}
+    }, 300) as unknown as number; // debounce to avoid 429s on quick toggles
+  };
+
+  form.querySelectorAll('input[name="vehicle"]').forEach((el) => el.addEventListener('change', scheduleRecalc));
+  form.querySelectorAll('input[name="roundtrip"]').forEach((el) => el.addEventListener('change', scheduleRecalc));
+
   // ---- Book Now -> emit event, store prefill, navigate/scroll
   bookBtn.addEventListener('click', () => {
     if (!lastQuote) return;

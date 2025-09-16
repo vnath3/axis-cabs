@@ -164,8 +164,14 @@
         const payload = { name, whatsapp: phone, from: d.meta.origin, to: state.stops[state.stops.length-1], vehicle: state.vehicle, pax: String(state.pax), date: state.date, notes, page: location.pathname };
         const res = await fetch('/api/leads-submit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
         const ok = res.ok && (await res.json().catch(()=>({}))).ok;
-        note.textContent = ok ? 'Saved your request ✔' : 'Could not save lead, but WhatsApp will still open.';
-        note.className = ok ? 'note ok' : 'note err';
+        if (ok) {
+          note.textContent = 'Saved your request ✔';
+          note.className = 'note ok';
+        } else {
+          // Suppress non-blocking error message; keep UI quiet
+          note.textContent = '';
+          note.className = 'note';
+        }
       } catch { note.textContent = 'Could not save lead (network).'; note.className = 'note err'; }
 
       // WhatsApp summary
