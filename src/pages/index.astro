@@ -17,6 +17,8 @@ import Base from '@/layouts/Base.astro';
 import ReviewsSection from '@/components/ReviewsSection.astro';
 import FareCalcCard from '@/components/FareCalcCard.astro';
 import FareCalculatorModal from '@/components/FareCalculatorModal.astro';
+import ItineraryCard from '@/components/ItineraryCard.astro';
+import ItineraryModal from '@/components/ItineraryModal.astro';
 import DestinationsGrid from "@/components/DestinationsGrid.astro";
 import { reviewsAggregate } from "@/data/reviews-aggregate";
 
@@ -27,7 +29,7 @@ const site = 'https://axis-cabs.netlify.app';
 
 <Base
   title="Axis Cabs — Ground Travel & Itineraries, Sorted."
-  description="Book intercity cabs, itineraries, and hidden gems across India. Transparent fares, professional drivers, 24×7 support."
+  description="Book intercity cabs, itineraries, and hidden gems across India. Transparent fares, professional drivers, 24x7 support."
 >
   <!-- Page-specific <head> -->
   <Fragment slot="head">
@@ -56,7 +58,7 @@ const site = 'https://axis-cabs.netlify.app';
 
   <Hero
     title="Cabs & Itineraries Across India"
-    sub="Instant WhatsApp quotes • Transparent fares • 24×7 support"
+    sub="Instant WhatsApp quotes • Transparent fares • 24x7 support"
   />
 
   <!-- Main grid -->
@@ -69,24 +71,27 @@ const site = 'https://axis-cabs.netlify.app';
       <LeadForm />
     </div>
 
-    <!-- Right: Popular Routes card + Fare Calculator trigger card -->
+    <!-- Right sidebar: 1) Estimate 2) Itinerary 3) Popular Routes -->
     <aside class="space-y-4">
+      <!-- 1) Estimate your fare -->
+      <FareCalcCard />
+      <!-- 2) AI Itinerary generator -->
+      <ItineraryCard />
+      <!-- 3) Popular Routes -->
       <div class="card">
         <h3 class="font-semibold mb-2">Popular Routes</h3>
         <ul class="list-disc list-inside text-sm space-y-1">
-          <li><a class="underline" href="/city-to-city/pune-to-mumbai-cab">Pune → Mumbai</a></li>
-          <li><a class="underline" href="/city-to-city/delhi-to-agra-cab">Delhi → Agra</a></li>
-          <li><a class="underline" href="/city-to-city/jaipur-to-udaipur-cab">Jaipur → Udaipur</a></li>
+          <li><a class="underline" href="/city-to-city/pune-to-mumbai-cab">Pune - Mumbai</a></li>
+          <li><a class="underline" href="/city-to-city/delhi-to-agra-cab">Delhi - Agra</a></li>
+          <li><a class="underline" href="/city-to-city/jaipur-to-udaipur-cab">Jaipur - Udaipur</a></li>
         </ul>
       </div>
-
-      <!-- Separate trigger card just below Popular Routes -->
-      <FareCalcCard />
     </aside>
   </main>
 
   <!-- Modal lives ONCE per page (outside grid) -->
   <FareCalculatorModal />
+  <ItineraryModal />
 
   <StickyCTAs />
 
@@ -98,3 +103,4 @@ const site = 'https://axis-cabs.netlify.app';
 
   <Footer />
 </Base>
+

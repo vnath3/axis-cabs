@@ -1,0 +1,92 @@
+---
+// Minimal floating chat widget that calls /api/quick-answer
+---
+
+<div class="fixed right-4 bottom-4 z-50" id="qc-root">
+  <button
+    id="qc-toggle"
+    aria-label="Quick chat"
+    class="rounded-full w-12 h-12 shadow-lg flex items-center justify-center bg-[var(--ac-brand)] hover:bg-[var(--ac-brand-hover)] text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--ac-brand)]"
+  >
+    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+      <path d="M21 11.5a8.5 8.5 0 0 1-12.23 7.59L3 21l1.91-5.3A8.5 8.5 0 1 1 21 11.5z" />
+    </svg>
+  </button>
+
+  <div id="qc-panel" role="dialog" aria-label="Quick chat" class="hidden w-80 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden mt-2">
+    <div class="bg-slate-900 text-white px-3 py-2 flex items-center justify-between">
+      <div class="font-semibold">Ask Axis</div>
+      <button id="qc-close" aria-label="Close" class="px-2 py-1 text-white hover:opacity-80">✕</button>
+    </div>
+    <div id="qc-body" class="px-3 py-2 max-h-[50vh] overflow-auto text-sm">
+      <div class="mb-2">Hi! Ask about fares, packages, airport transfers, or hidden gems.</div>
+      <div class="mb-2">
+        <span class="text-slate-600">Try:</span>
+        <span class="chip cursor-pointer" data-q="pune to mumbai fare">pune -&gt; mumbai fare</span>
+        <span class="chip cursor-pointer" data-q="ajanta ellora package">ajanta ellora package</span>
+        <span class="chip cursor-pointer" data-q="hidden gems near ellora">hidden gems</span>
+      </div>
+    </div>
+    <div class="flex gap-2 p-3 border-t border-gray-200">
+      <input id="qc-input" placeholder="Type your question..." class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" />
+      <button id="qc-send" class="btn btn-primary rounded-xl">Send</button>
+    </div>
+  </div>
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+    const root = $('#qc-root');
+    const panel = $('#qc-panel');
+    const toggle = $('#qc-toggle');
+    const closeBtn = $('#qc-close');
+    const body = $('#qc-body');
+    const input = $('#qc-input');
+    const send = $('#qc-send');
+
+    function showPanel(v){ panel.classList.toggle('hidden', !v); if(v) input?.focus(); }
+    toggle?.addEventListener('click', () => showPanel(panel.classList.contains('hidden')));
+    closeBtn?.addEventListener('click', () => showPanel(false));
+    document.addEventListener('click', (e) => {
+      if (!panel.classList.contains('hidden') && !root.contains(e.target)) showPanel(false);
+    });
+
+    function addMsg(text, me=false){
+      const d = document.createElement('div');
+      d.className = 'qc-msg' + (me ? ' me' : '');
+      if (/\n/.test(text)) { const pre = document.createElement('pre'); pre.textContent = text; d.appendChild(pre); }
+      else d.textContent = text;
+      body.appendChild(d); body.scrollTop = body.scrollHeight;
+    }
+
+    function addList(items){
+      const ul = document.createElement('ul'); ul.className = 'list-disc pl-5 my-1';
+      items.forEach((it) => {
+        const li = document.createElement('li'); li.className = '';
+        const a = document.createElement('a'); a.textContent = it.title; a.href = it.slug ? ('/packages/' + it.slug) : '#'; a.className = 'underline';
+        li.appendChild(a);
+        if (it.summary) { const t = document.createElement('div'); t.textContent = it.summary; li.appendChild(t); }
+        ul.appendChild(li);
+      });
+      body.appendChild(ul); body.scrollTop = body.scrollHeight;
+    }
+
+    body.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-q]');
+      if (chip) { input.value = chip.getAttribute('data-q'); input.focus(); }
+    });
+
+    async function ask(){
+      const q = (input.value||'').trim(); if (!q) return;
+      addMsg(q, true); input.value = '';
+      try {
+        const res = await fetch('/api/quick-answer', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ query: q }) });
+        const data = await res.json().catch(() => ({}));
+        if (data?.text) addMsg(data.text, false);
+        if (Array.isArray(data?.data)) addList(data.data);
+      } catch {
+        addMsg('Hmm, something went wrong. Please try again or WhatsApp us.');
+      }
+    }
+    input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') ask(); });
+    send?.addEventListener('click', ask);
+  </script>
+</div>

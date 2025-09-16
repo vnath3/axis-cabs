@@ -94,6 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
     status: "new",
     name,
     whatsapp,
+    email: emptyToNull(body.email || ""),
     from_city: emptyToNull(body.from_city || body.from || ""),
     to_city: emptyToNull(body.to_city || body.to || ""),
     date: emptyToNull(body.date || ""),

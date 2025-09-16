@@ -51,23 +51,20 @@ export const GET: APIRoute = async ({ request, url }) => {
     });
   }
 
-  // ---- CASE-INSENSITIVE route lookup (ilike) ----
-  // Perform two parameterized queries: first A->B, then B->A.
-  // Combine results and keep the first match to preserve existing behavior.
-  const [ab, ba] = await Promise.all([
-    supabase
-      .from('distance_matrix')
-      .select('from_city,to_city,km,toll_low,toll_high,highway_note')
-      .ilike('from_city', from)
-      .ilike('to_city', to)
-      .limit(1),
-    supabase
-      .from('distance_matrix')
-      .select('from_city,to_city,km,toll_low,toll_high,highway_note')
-      .ilike('from_city', to)
-      .ilike('to_city', from)
-      .limit(1),
-  ]);
+  // ---- Route lookup: prefer normalized columns if present ----
+  // We use generated/stored columns from_city_norm/to_city_norm if available,
+  // else fall back to case-insensitive ilike on raw columns.
+  async function lookup(a: string, b: string) {
+    const sel = 'from_city,to_city,km,toll_low,toll_high,highway_note';
+    let q = supabase.from('distance_matrix').select(sel).limit(1) as any;
+    // Try normalized columns first
+    q = q.eq ? q.eq('from_city_norm', a).eq('to_city_norm', b) : q;
+    const r = await q;
+    if (r.data && r.data.length) return r;
+    // Fallback to ilike exact (case-insensitive) on raw columns
+    return await supabase.from('distance_matrix').select(sel).ilike('from_city', a).ilike('to_city', b).limit(1);
+  }
+  const [ab, ba] = await Promise.all([lookup(from, to), lookup(to, from)]);
 
   const route = [...(ab.data ?? []), ...(ba.data ?? [])][0];
   if (!route) {

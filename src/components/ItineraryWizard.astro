@@ -1,0 +1,188 @@
+---
+// Three-step itinerary wizard (MVP)
+---
+
+<style>
+  .wiz { border: 1px solid #e5e7eb; border-radius: .75rem; overflow: hidden; background: #fff; }
+  .wiz-h { background: #111827; color: #fff; padding: .75rem 1rem; font-weight: 600; }
+  .wiz-b { padding: 1rem; }
+  .row { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+  @media (min-width: 640px) { .row.two { grid-template-columns: 1fr 1fr; } }
+  label { display:block; font-size:.85rem; color:#374151; margin-bottom:.15rem; }
+  input, select, textarea { width: 100%; border: 1px solid #d1d5db; border-radius: .5rem; padding: .5rem .75rem; }
+  .btn { background:#111827; color:#fff; padding:.5rem .75rem; border-radius:.5rem; }
+  .btn.secondary { background:#f3f4f6; color:#111827; }
+  .steps { display:flex; gap:.25rem; padding:.5rem; }
+  .dot { width: 28px; height: 28px; border-radius: 9999px; display:flex; align-items:center; justify-content:center; background:#f3f4f6; color:#6b7280; font-weight:600; }
+  .dot.on { background:#111827; color:#fff; }
+  .cars { display:flex; gap:.5rem; margin:.5rem 0; }
+  .car { flex:1; border:1px solid #d1d5db; border-radius:.5rem; padding:.5rem; text-align:center; cursor:pointer; }
+  .car.on { border-color:#111827; box-shadow: inset 0 0 0 2px #111827; }
+  .est { background:#f9fafb; border:1px dashed #d1d5db; border-radius:.5rem; padding:.5rem .75rem; font-size:.95rem; }
+  .sum { background:#f9fafb; border:1px solid #e5e7eb; border-radius:.5rem; padding:.75rem; font-size:.95rem; }
+  .actions { display:flex; gap:.5rem; }
+  .note { color:#6b7280; font-size:.85rem; }
+  .ok { color:#065f46; }
+  .err { color:#991b1b; }
+</style>
+
+<div class="wiz">
+  <div class="wiz-h">Plan Your Itinerary</div>
+  <div class="steps">
+    <div class="dot on" data-step-dot="1">1</div>
+    <div class="dot" data-step-dot="2">2</div>
+    <div class="dot" data-step-dot="3">3</div>
+  </div>
+  <div class="wiz-b">
+    <div data-step="1">
+      <div class="row two">
+        <div>
+          <label>Origin city</label>
+          <input id="iw-origin" placeholder="e.g., Pune" />
+        </div>
+        <div>
+          <label>Date</label>
+          <input id="iw-date" type="date" />
+        </div>
+      </div>
+      <div class="row two" style="margin-top:.5rem;">
+        <div>
+          <label>Stops (in order)</label>
+          <input id="iw-stops" placeholder="e.g., Mumbai, Lonavala" />
+        </div>
+        <div>
+          <label>Passengers</label>
+          <input id="iw-pax" type="number" min="1" value="2" />
+        </div>
+      </div>
+      <div style="margin-top:.75rem;" class="actions">
+        <button class="btn" id="iw-next-1">Next</button>
+        <div class="note">Tip: Add 1–3 stops, comma-separated.</div>
+      </div>
+    </div>
+
+    <div data-step="2" hidden>
+      <div><label>Select car type</label></div>
+      <div class="cars">
+        <div class="car on" data-car="sedan">Sedan</div>
+        <div class="car" data-car="suv">SUV</div>
+        <div class="car" data-car="traveller">Tempo</div>
+      </div>
+      <div class="est" id="iw-est">Pick a car to see estimate…</div>
+      <div style="margin-top:.75rem;" class="actions">
+        <button class="btn secondary" id="iw-prev-2">Back</button>
+        <button class="btn" id="iw-next-2">Next</button>
+      </div>
+    </div>
+
+    <div data-step="3" hidden>
+      <div class="sum" id="iw-sum">Itinerary summary will appear here…</div>
+      <div class="row two" style="margin-top:.75rem;">
+        <div>
+          <label>Your name</label>
+          <input id="iw-name" placeholder="Name" />
+        </div>
+        <div>
+          <label>WhatsApp</label>
+          <input id="iw-phone" placeholder="Phone number" />
+        </div>
+      </div>
+      <div style="margin-top:.75rem;" class="actions">
+        <button class="btn secondary" id="iw-prev-3">Back</button>
+        <button class="btn" id="iw-submit">WhatsApp summary + Save lead</button>
+      </div>
+      <div class="note" id="iw-note"></div>
+    </div>
+  </div>
+  <script type="module">
+    const qs = (s, r=document) => r.querySelector(s);
+    const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
+    let step = 1;
+    const dots = qsa('[data-step-dot]');
+    const views = qsa('[data-step]');
+    const setStep = (n) => { step = n; views.forEach(v => v.hidden = String(v.getAttribute('data-step')) !== String(n)); dots.forEach(d => d.classList.toggle('on', d.getAttribute('data-step-dot') === String(n))); };
+
+    const state = { origin:'', date:'', stops:[], pax:2, vehicle:'sedan', result:null };
+    const origin = qs('#iw-origin');
+    const date = qs('#iw-date');
+    const stops = qs('#iw-stops');
+    const pax = qs('#iw-pax');
+    const est = qs('#iw-est');
+    const sum = qs('#iw-sum');
+    const note = qs('#iw-note');
+
+    qs('#iw-next-1')?.addEventListener('click', () => {
+      state.origin = (origin.value||'').trim();
+      state.date = (date.value||'').trim();
+      state.stops = (stops.value||'').split(',').map(s=>s.trim()).filter(Boolean);
+      state.pax = Math.max(1, Number(pax.value||1));
+      if (!state.origin || state.stops.length === 0){ alert('Please enter origin and at least one stop.'); return; }
+      setStep(2);
+    });
+    qs('#iw-prev-2')?.addEventListener('click', () => setStep(1));
+    qsa('.car').forEach(el => el.addEventListener('click', () => {
+      qsa('.car').forEach(c => c.classList.remove('on'));
+      el.classList.add('on');
+      state.vehicle = el.getAttribute('data-car');
+      refreshEstimate();
+    }));
+    async function refreshEstimate(){
+      est.textContent = 'Estimating…';
+      try {
+        const res = await fetch('/api/itinerary', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ origin: state.origin, date: state.date, stops: state.stops, pax: state.pax, vehicle: state.vehicle }) });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data?.ok) { est.textContent = data?.error || 'Could not compute estimate.'; state.result=null; return; }
+        state.result = data;
+        const kms = Math.round(data.totals.km);
+        est.innerHTML = `${state.vehicle.toUpperCase()} • ~${kms} km<br/>Fare: ₹${Number(data.fare.low).toLocaleString('en-IN')} - ₹${Number(data.fare.high).toLocaleString('en-IN')}`;
+      } catch {
+        est.textContent = 'Network error. Try again.';
+        state.result = null;
+      }
+    }
+    qs('#iw-next-2')?.addEventListener('click', () => {
+      if (!state.result) { alert('Please wait for estimate.'); return; }
+      const d = state.result;
+      const lines = [];
+      lines.push(`Origin: ${d.meta.origin}`);
+      lines.push(`Stops: ${state.stops.join(' → ')}`);
+      lines.push(`Vehicle: ${state.vehicle.toUpperCase()}, Pax: ${state.pax}`);
+      lines.push(`Distance: ~${Math.round(d.totals.km)} km`);
+      lines.push(`Fare: ₹${Number(d.fare.low).toLocaleString('en-IN')} - ₹${Number(d.fare.high).toLocaleString('en-IN')}`);
+      sum.textContent = lines.join('\n');
+      setStep(3);
+    });
+    qs('#iw-prev-3')?.addEventListener('click', () => setStep(2));
+
+    qs('#iw-submit')?.addEventListener('click', async () => {
+      const name = (qs('#iw-name').value||'').trim();
+      const phone = (qs('#iw-phone').value||'').replace(/\D/g,'');
+      if (!name || phone.length < 8) { alert('Please enter your name and a valid WhatsApp number.'); return; }
+      const d = state.result; if (!d) { alert('Estimate missing.'); return; }
+      const notes = `Itinerary\n${(d.meta.origin)} -> ${state.stops.join(' -> ')}\nVehicle: ${state.vehicle}, Pax: ${state.pax}\nDistance: ~${Math.round(d.totals.km)} km\nFare: ₹${Number(d.fare.low).toLocaleString('en-IN')} - ₹${Number(d.fare.high).toLocaleString('en-IN')}`;
+      try {
+        const payload = { name, whatsapp: phone, from: d.meta.origin, to: state.stops[state.stops.length-1], vehicle: state.vehicle, pax: String(state.pax), date: state.date, notes, page: location.pathname };
+        const res = await fetch('/api/leads-submit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const ok = res.ok && (await res.json().catch(()=>({}))).ok;
+        note.textContent = ok ? 'Saved your request ✔' : 'Could not save lead, but WhatsApp will still open.';
+        note.className = ok ? 'note ok' : 'note err';
+      } catch { note.textContent = 'Could not save lead (network).'; note.className = 'note err'; }
+
+      // WhatsApp summary
+      const msg = [
+        'Hi Axis Cabs! I need an itinerary quote:',
+        `Name: ${name}`,
+        `Phone: ${phone}`,
+        `Origin: ${state.result.meta.origin}`,
+        `Stops: ${state.stops.join(' → ')}`,
+        `Vehicle: ${state.vehicle.toUpperCase()}, Pax: ${state.pax}`,
+        `Date: ${state.date || 'flexible'}`,
+        `Estimate: ₹${Number(state.result.fare.low).toLocaleString('en-IN')} - ₹${Number(state.result.fare.high).toLocaleString('en-IN')}`,
+        `Page: ${location.pathname}`
+      ].join('\n');
+      const wa = 'https://wa.me/919922333305?text=' + encodeURIComponent(msg);
+      window.open(wa, '_blank', 'noopener');
+    });
+  </script>
+</div>
+

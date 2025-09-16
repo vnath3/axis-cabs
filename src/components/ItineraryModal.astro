@@ -1,0 +1,289 @@
+---
+/**
+ * ItineraryModal.astro
+ * Modal with 3-step AI Itinerary wizard.
+ * Opens with: window.dispatchEvent(new CustomEvent('itinerary:open'))
+ */
+---
+
+<style>
+  .ac-modal { @apply fixed inset-0 z-50 flex items-end md:items-center justify-center; }
+  .ac-backdrop { @apply absolute inset-0 bg-black/50; }
+  .ac-sheet { @apply relative w-full md:max-w-3xl bg-white rounded-t-2xl md:rounded-2xl shadow-xl p-4 md:p-6; }
+  .wiz-h { @apply flex items-start justify-between gap-4 mb-3; }
+  .row { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+  @media (min-width: 640px) { .row.two { grid-template-columns: 1fr 1fr; } }
+  label { @apply block text-xs font-medium text-gray-600 mb-1; }
+  input, select, textarea { @apply w-full rounded-lg border border-gray-200 px-3 py-2 text-sm; }
+  .steps { @apply flex gap-1 mb-2; }
+  .dot { @apply w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-500 font-semibold; }
+  .dot.on { @apply bg-gray-900 text-white; }
+  .cars { @apply flex gap-2 my-2; }
+  .car { @apply flex-1 border border-gray-200 rounded-lg p-2 text-center cursor-pointer; }
+  .car.on { box-shadow: inset 0 0 0 2px var(--ac-brand); border-color: var(--ac-brand); }
+  .est { @apply bg-gray-50 border border-dashed border-gray-200 rounded-lg px-3 py-2 text-sm; }
+  .sum { @apply bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm whitespace-pre-wrap; }
+  .note { @apply text-xs mt-2; }
+  .ok { @apply text-green-700; }
+  .err { @apply text-red-700; }
+</style>
+
+<div id="itinerary-modal" class="hidden" aria-hidden="true">
+  <div class="ac-modal">
+    <div class="ac-backdrop" data-close></div>
+    <div class="ac-sheet">
+      <div class="wiz-h">
+        <h3 class="h3">AI Itinerary</h3>
+        <button class="btn btn-ghost" data-close aria-label="Close">✕</button>
+      </div>
+
+      <div class="steps">
+        <div class="dot on" data-step-dot="1">1</div>
+        <div class="dot" data-step-dot="2">2</div>
+        <div class="dot" data-step-dot="3">3</div>
+      </div>
+
+      <div class="space-y-4">
+        <div data-step="1">
+          <div class="row two">
+            <div>
+              <label>Origin city</label>
+              <input id="iw-origin" placeholder="e.g., Pune" />
+            </div>
+            <div>
+              <label>Date</label>
+              <input id="iw-date" type="date" />
+            </div>
+          </div>
+          <div class="row two">
+            <div>
+              <label>Stops (in order)</label>
+              <input id="iw-stops" placeholder="e.g., Mumbai, Lonavala" />
+            </div>
+            <div>
+              <label>Passengers</label>
+              <input id="iw-pax" type="number" min="1" value="2" />
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-3 mt-2">
+            <button class="btn btn-primary" id="iw-next-1">Next</button>
+            <span class="text-xs text-gray-500">Tip: Add 1–3 stops, comma-separated.</span>
+          </div>
+        </div>
+
+        <div data-step="2" hidden>
+          <div><label>Select car type</label></div>
+          <div class="cars">
+            <div class="car on" data-car="sedan">Sedan</div>
+            <div class="car" data-car="suv">SUV</div>
+            <div class="car" data-car="traveller">Tempo</div>
+          </div>
+          <div class="est" id="iw-est">Pick a car to see estimate…</div>
+          <div class="flex items-center gap-3 mt-2">
+            <button class="btn btn-ghost" id="iw-prev-2">Back</button>
+            <button class="btn btn-primary" id="iw-next-2">Next</button>
+          </div>
+        </div>
+
+        <div data-step="3" hidden>
+          <div class="sum" id="iw-sum">Itinerary summary will appear here…</div>
+          <div class="row two mt-2">
+            <div>
+              <label>Your name</label>
+              <input id="iw-name" placeholder="Name" />
+            </div>
+            <div>
+              <label>WhatsApp</label>
+              <input id="iw-phone" placeholder="Phone number" />
+            </div>
+          </div>
+          <div class="row mt-2">
+            <div>
+              <label>Email (optional)</label>
+              <input id="iw-email" type="email" placeholder="name@example.com" />
+              <div class="text-xs text-gray-500 mt-1">We’ll send your complete itinerary over email.</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 mt-2">
+            <button class="btn btn-ghost" id="iw-prev-3">Back</button>
+            <button class="btn btn-primary" id="iw-submit">Submit</button>
+          </div>
+          <div class="note" id="iw-note"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    const modal = document.getElementById('itinerary-modal');
+    const sheet = modal ? modal.querySelector('.ac-sheet') : null;
+    function show(){ if(!modal) return; modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false'); }
+    function hide(){ if(!modal) return; modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true'); }
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!(t instanceof Element)) return;
+        if (t.hasAttribute('data-close') || t.closest('[data-close]')) hide();
+      });
+    }
+    window.addEventListener('itinerary:open', show);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) hide(); });
+
+    // Wizard state
+    const qs = (s, r=document) => r.querySelector(s);
+    const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
+    let step = 1;
+    const dots = sheet ? qsa('[data-step-dot]', sheet) : [];
+    const views = sheet ? qsa('[data-step]', sheet) : [];
+    const setStep = (n) => {
+      step = n;
+      views.forEach(v => { v.hidden = String(v.getAttribute('data-step')) !== String(n); });
+      dots.forEach(d => d.classList.toggle('on', d.getAttribute('data-step-dot') === String(n)));
+    };
+
+    const state = { origin:'', date:'', stops:[], pax:2, vehicle:'sedan', result:null };
+    const origin = qs('#iw-origin', sheet);
+    const date = qs('#iw-date', sheet);
+    const stops = qs('#iw-stops', sheet);
+    const pax = qs('#iw-pax', sheet);
+    const est = qs('#iw-est', sheet);
+    const sum = qs('#iw-sum', sheet);
+    const note = qs('#iw-note', sheet);
+
+    // ---- Date defaults: min=today, default=tomorrow ----
+    (function initDate(){
+      if (!date) return;
+      const pad = (n) => String(n).padStart(2,'0');
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+      const tm = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1);
+      const tomorrowStr = `${tm.getFullYear()}-${pad(tm.getMonth()+1)}-${pad(tm.getDate())}`;
+      try { date.setAttribute('min', todayStr); } catch {}
+      if (!date.value) date.value = tomorrowStr;
+      date.addEventListener('change', () => {
+        if (date.value && date.min && date.value < date.min) date.value = date.min;
+      });
+    })();
+
+    qs('#iw-next-1', sheet)?.addEventListener('click', () => {
+      state.origin = (origin?.value||'').trim();
+      state.date = (date?.value||'').trim();
+      state.stops = (stops?.value||'').split(',').map(s=>s.trim()).filter(Boolean);
+      state.pax = Math.max(1, Number(pax?.value||1));
+      if (!state.origin || state.stops.length === 0){ alert('Please enter origin and at least one stop.'); return; }
+      setStep(2);
+    });
+    qs('#iw-prev-2', sheet)?.addEventListener('click', () => setStep(1));
+    qsa('.car', sheet).forEach(el => el.addEventListener('click', () => {
+      qsa('.car', sheet).forEach(c => c.classList.remove('on'));
+      el.classList.add('on');
+      state.vehicle = el.getAttribute('data-car');
+      refreshEstimate();
+    }));
+    async function refreshEstimate(){
+      if (!est) return;
+      est.textContent = 'Estimating…';
+      try {
+        const res = await fetch('/api/itinerary', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ origin: state.origin, date: state.date, stops: state.stops, pax: state.pax, vehicle: state.vehicle }) });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data?.ok) { est.textContent = data?.error || 'Could not compute estimate.'; state.result=null; return; }
+        state.result = data;
+        const kms = Math.round(data.totals.km);
+        est.innerHTML = state.vehicle.toUpperCase() + ' • ~' + kms + ' km<br/>Fare: ₹' + Number(data.fare.low).toLocaleString('en-IN') + ' - ₹' + Number(data.fare.high).toLocaleString('en-IN');
+      } catch {
+        est.textContent = 'Network error. Try again.';
+        state.result = null;
+      }
+    }
+    qs('#iw-next-2', sheet)?.addEventListener('click', () => {
+      if (!state.result) { alert('Please wait for estimate.'); return; }
+      const d = state.result;
+      const lines = [];
+      lines.push('Origin: ' + d.meta.origin);
+      lines.push('Stops: ' + state.stops.join(' → '));
+      if (state.date) lines.push('Date: ' + state.date);
+      lines.push('Vehicle: ' + state.vehicle.toUpperCase() + ', Pax: ' + state.pax);
+      lines.push('Distance: ~' + Math.round(d.totals.km) + ' km');
+      lines.push('Fare: ₹' + Number(d.fare.low).toLocaleString('en-IN') + ' - ₹' + Number(d.fare.high).toLocaleString('en-IN'));
+      // Add concise plan preview
+      try {
+        if (Array.isArray(d.plan) && d.plan.length) {
+          lines.push('');
+          lines.push('Plan:');
+          d.plan.forEach((day) => {
+            lines.push('  Day ' + day.day + ' - ' + day.title);
+            (day.activities||[]).forEach((a) => {
+              lines.push('    • ' + (a.time_hint||'') + ' - ' + a.name);
+            });
+          });
+        }
+      } catch {}
+      if (sum) sum.textContent = lines.join('\n');
+      setStep(3);
+    });
+    qs('#iw-prev-3', sheet)?.addEventListener('click', () => setStep(2));
+
+    qs('#iw-submit', sheet)?.addEventListener('click', async () => {
+      const name = (qs('#iw-name', sheet)?.value||'').trim();
+      const phone = (qs('#iw-phone', sheet)?.value||'').replace(/\D/g,'');
+      const email = (qs('#iw-email', sheet)?.value||'').trim();
+      if (!name || phone.length < 8) { alert('Please enter your name and a valid WhatsApp number.'); return; }
+      const d = state.result; if (!d) { alert('Estimate missing.'); return; }
+      // Build notes with plan included (for CRM)
+      const lines = [];
+      lines.push('Itinerary');
+      lines.push(d.meta.origin + ' -> ' + state.stops.join(' -> '));
+      if (state.date) lines.push('Date: ' + state.date);
+      lines.push('Vehicle: ' + state.vehicle + ', Pax: ' + state.pax);
+      lines.push('Distance: ~' + Math.round(d.totals.km) + ' km');
+      lines.push('Fare: ₹' + Number(d.fare.low).toLocaleString('en-IN') + ' - ₹' + Number(d.fare.high).toLocaleString('en-IN'));
+      if (Array.isArray(d.plan)) {
+        lines.push('Plan:');
+        d.plan.forEach((day) => {
+          lines.push('  Day ' + day.day + ' - ' + day.title);
+          (day.activities||[]).forEach((a) => { lines.push('    - ' + (a.time_hint||'') + ' ' + a.name); });
+        });
+      }
+      const notes = lines.join('\n');
+      try {
+        const payload = { name, whatsapp: phone, email, from: d.meta.origin, to: state.stops[state.stops.length-1], vehicle: state.vehicle, pax: String(state.pax), date: state.date, notes, page: location.pathname };
+        const res = await fetch('/api/leads-submit', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const ok = res.ok && (await res.json().catch(()=>({}))).ok;
+        if (note) { note.textContent = ok ? 'Saved your request ✔' : 'Could not save lead, but WhatsApp will still open.'; note.className = 'note ' + (ok ? 'ok' : 'err'); }
+      } catch { if (note) { note.textContent = 'Could not save lead (network).'; note.className = 'note err'; } }
+
+      // WhatsApp summary
+      const msgLines = [
+        'Hi Axis Cabs! I need an itinerary quote:',
+        'Name: ' + name,
+        'Phone: ' + phone,
+        (email ? ('Email: ' + email) : null),
+        'Origin: ' + state.result.meta.origin,
+        'Stops: ' + state.stops.join(' → '),
+        'Vehicle: ' + state.vehicle.toUpperCase() + ', Pax: ' + state.pax,
+        'Date: ' + (state.date || 'flexible'),
+        'Estimate: ₹' + Number(state.result.fare.low).toLocaleString('en-IN') + ' - ₹' + Number(state.result.fare.high).toLocaleString('en-IN')
+      ].filter(Boolean);
+      // add short plan preview in WA text
+      try {
+        const p = state.result.plan || [];
+        if (p.length) {
+          msgLines.push('');
+          msgLines.push('Plan:');
+          p.forEach((day) => {
+            msgLines.push('  Day ' + day.day + ' - ' + day.title);
+            (day.activities||[]).slice(0,3).forEach((a) => {
+              msgLines.push('    • ' + (a.time_hint||'') + ' - ' + a.name);
+            });
+          });
+        }
+      } catch {}
+      msgLines.push('');
+      msgLines.push('Page: ' + location.pathname);
+      const msg = msgLines.join('\n');
+      const wa = 'https://wa.me/919922333305?text=' + encodeURIComponent(msg);
+      window.open(wa, '_blank', 'noopener');
+    });
+  </script>
+</div>

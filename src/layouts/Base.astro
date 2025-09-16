@@ -1,5 +1,6 @@
 ---
 import ReviewNudge from '@/components/ReviewNudge.astro';
+import QuickChat from '@/components/QuickChat.astro';
 
 export interface Props {
   title?: string;
@@ -71,6 +72,7 @@ const GA_ID = import.meta.env.PUBLIC_GA4_ID || '';
 
     <!-- ✅ Nudge mounted once site-wide -->
     <ReviewNudge />
+    <QuickChat />
     <script is:inline type="module">
     (() => {
       // ---- UTM CAPTURE ----
